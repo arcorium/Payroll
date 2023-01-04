@@ -1,25 +1,35 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"Penggajian/pkg/util"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
+)
 
 type User struct {
-	Id          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Type        UserType           `json:"type" bson:"type"`
-	TeacherName string             `json:"teacher_name" bson:"teacher_name"`
-	Username    string             `json:"username" bson:"username"`
-	Password    string             `json:"password" bson:"password"`
-	IsLoggedIn  bool               `json:"is_logged_in" bson:"is_logged_in"`
-	TeacherId   primitive.ObjectID `json:"detail" bson:"detail"`
+	Id         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	Type       UserType           `json:"type,omitempty" bson:"type"`
+	Username   string             `json:"username,omitempty" bson:"username"`
+	Password   string             `json:"password" bson:"password"`
+	IsLoggedIn bool               `json:"is_logged_in,omitempty" bson:"is_logged_in"`
+	TeacherId  primitive.ObjectID `json:"detail,omitempty" bson:"detail"`
+
+	CreatedAt  time.Time `json:"created_at,omitempty" bson:"created_at,omitempty"`
+	ModifiedAt time.Time `json:"modified_at,omitempty" bson:"modified_at,omitempty"`
 }
 
 func (u *User) SetDefaultValue(teacherId_ primitive.ObjectID) {
-	u.Type = Admin
+	if util.IsEmpty(string(u.Type)) {
+		u.Type = Admin
+	}
 	u.IsLoggedIn = false
 	u.TeacherId = teacherId_
+	u.CreatedAt = time.Now()
+	u.UpdateModifiedTime()
+}
 
-	if len(u.Username) < 1 {
-		u.Username = u.TeacherName
-	}
+func (u *User) UpdateModifiedTime() {
+	u.ModifiedAt = time.Now()
 }
 
 type UserType string

@@ -1,6 +1,7 @@
 package dbutil
 
 import (
+	"Penggajian/pkg/util"
 	"errors"
 	"os"
 	"strings"
@@ -8,26 +9,22 @@ import (
 
 func GetURI() (string, error) {
 	var err error = nil
-	// Retrieve environment variable
-	mongoUri := os.Getenv("MONGODB_URI")
+
+	mongoProtocol := os.Getenv("MONGODB_PROTOCOL")
 	mongoUser := os.Getenv("MONGODB_USER")
 	mongoPass := os.Getenv("MONGODB_PASS")
-	// Existence check
-	if len(mongoUri) < 1 || len(mongoUser) < 1 || len(mongoPass) < 1 {
-		err = errors.New("environment for MONGODB_USER, MONGODB_PASS, MONGODB_URI should be there")
-		return mongoUri, err
+	mongoUrl := os.Getenv("MONGODB_URL")
+	mongoProps := os.Getenv("MONGODB_PROPERTIES")
+
+	if util.IsEmpty(mongoProtocol) ||
+		util.IsEmpty(mongoUser) ||
+		util.IsEmpty(mongoPass) ||
+		util.IsEmpty(mongoUrl) ||
+		util.IsEmpty(mongoProps) {
+		return "", errors.New("environment variable is not satisfied")
 	}
-
-	strings.Index(mongoUri, "{USER}")
-	strings.Index(mongoUri, "{PASS}")
-
-	if !CheckURIFormat(mongoUri) {
-		err = errors.New("BAD FORMAT: format of MONGODB_URI should has {USER}:{PASS}. example: mongodb+srv://{USER}:{PASS}@your.database.is.here")
-		return mongoUri, err
-	}
-
-	mongoUri = strings.Replace(mongoUri, "{USER}", mongoUser, 1)
-	mongoUri = strings.Replace(mongoUri, "{PASS}", mongoPass, 1)
+	// Retrieve environment variable
+	mongoUri := mongoProtocol + "://" + mongoUser + ":" + mongoPass + "@" + mongoUrl + "/" + mongoProps
 
 	return mongoUri, err
 }

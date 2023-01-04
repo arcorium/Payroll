@@ -24,9 +24,13 @@ func main() {
 
 	// Repository
 	userRepo := repository.NewUserRepository(&db, "user")
-	
-	api := controller.NewAPI(&db, &userRepo)
+	staffRepo := repository.NewStaffRepository(&db, "teacher")
+	positionRepo := repository.NewPositionRepository(&db, "position")
+	teachRepo := repository.NewTeachRepository(&db, "ajar")
+	tokenRepo := repository.NewTokenRepository(&db, "token")
+
+	api := controller.NewAPI(&db, &userRepo, &staffRepo, &positionRepo, &teachRepo, &tokenRepo)
 	api.HandleAPI(app)
 
-	log.Println(app.Listen(":8811"))
+	log.Println(app.Listen(conf.BindAddress))
 }

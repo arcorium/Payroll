@@ -9,6 +9,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
+	"log"
 )
 
 type UserRepository struct {
@@ -20,7 +22,7 @@ func NewUserRepository(db_ *dbutil.Database, collectionName_ string) UserReposit
 	return UserRepository{db: db_, collection: db_.DB.Collection(collectionName_, options.Collection())}
 }
 
-func (r *UserRepository) AddUser(user_ *model.User) (primitive.ObjectID, error) {
+func (u *UserRepository) AddUser(user_ *model.User) (model.ResponseID, error) {
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
 
@@ -30,70 +32,56 @@ func (r *UserRepository) AddUser(user_ *model.User) (primitive.ObjectID, error) 
 	// TODO: Get teacher if there is not, return err
 	// TODO: Get user with same teacher objectId, if is there then return err
 
+	// Check existence
+	if u.isExist(user_) {
+		log.Println("Data already found!")
+		return model.NullResponseID(), errors.New("data already exists")
+	}
+
 	// Hash password
 	hashedPassword, err := util.Hash(user_.Password)
 	if err != nil {
-		return util.GetValue(primitive.ObjectIDFromHex("0")), err
+		return model.NullResponseID(), err
 	}
 	user_.Password = hashedPassword
 
-	res, err := r.collection.InsertOne(ctx, *user_, options.InsertOne())
+	res, err := u.collection.InsertOne(ctx, *user_, options.InsertOne())
 	if err != nil {
-		return util.GetValue(primitive.ObjectIDFromHex("0")), err
+		return model.NullResponseID(), err
 	}
 
-	return res.InsertedID.(primitive.ObjectID), err
+	return model.NewResponseID(res.InsertedID.(primitive.ObjectID)), err
 }
 
-func (r *UserRepository) GetUserByName(username_ string) (model.User, error) {
-	user := model.User{}
-	ctx, cancel := util.CreateTimeoutContext()
-	defer cancel()
-
-	result := r.collection.FindOne(ctx, bson.M{"username": username_}, options.FindOne())
-	if result != nil {
-		return user, errors.New("user not found")
-	}
-
-	if err := result.Decode(&user); err != nil {
-		return user, err
-	}
-
-	return user, nil
+func (u *UserRepository) RemoveUserById(id_ primitive.ObjectID) (model.User, error) {
+	return u.removeUserByFilter(bson.M{"_id": id_})
 }
 
-func (r *UserRepository) GetUserById(id_ string) (model.User, error) {
-	user := model.User{}
-	ctx, cancel := util.CreateTimeoutContext()
-	defer cancel()
-
-	id, err := primitive.ObjectIDFromHex(id_)
-	if err != nil {
-		return user, err
-	}
-
-	result := r.collection.FindOne(ctx, bson.M{"_id": id}, options.FindOne())
-	if result != nil {
-		return user, errors.New("user not found")
-	}
-
-	if err := result.Decode(&user); err != nil {
-		return user, err
-	}
-
-	return user, nil
+func (u *UserRepository) RemoveUserByName(username_ string) (model.User, error) {
+	return u.removeUserByFilter(bson.M{"username": username_})
 }
 
-func (r *UserRepository) GetUsers() ([]model.User, error) {
+func (u *UserRepository) GetUserByName(username_ string) (model.User, error) {
+	return u.getUserByFilter(bson.M{"username": username_})
+}
+
+func (u *UserRepository) GetUserById(id_ primitive.ObjectID) (model.User, error) {
+	return u.getUserByFilter(bson.M{"_id": id_})
+}
+
+func (u *UserRepository) GetUsers() ([]model.User, error) {
+	// Create context
 	var users []model.User
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
 
-	cursor, err := r.collection.Find(ctx, bson.M{}, options.Find())
+	// Find data with no filter
+	cursor, err := u.collection.Find(ctx, bson.M{}, options.Find())
 	if err != nil {
 		return users, err
 	}
 
+	// Iterate cursor
 	for cursor.Next(ctx) {
 		var user model.User
 		if err = cursor.Decode(&user); err != nil {
@@ -105,36 +93,105 @@ func (r *UserRepository) GetUsers() ([]model.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) ValidateUser(username_ string, password_ string) (model.User, error) {
-	user := model.User{}
-	ctx, cancel := util.CreateTimeoutContext()
-	defer cancel()
+func (u *UserRepository) EditUserById(id_ primitive.ObjectID, user_ *model.User) (model.ResponseID, error) {
+	return u.editUserByFilter(bson.M{"_id": id_}, user_)
+}
 
-	// Hash password
-	hashedPassword, err := util.Hash(password_)
+func (u *UserRepository) EditUserByName(username_ string, user_ *model.User) (model.ResponseID, error) {
+	return u.editUserByFilter(bson.M{"username": username_}, user_)
+}
+
+func (u *UserRepository) ValidateUser(username_ string, password_ string) (model.User, error) {
+	// Get user based on username
+	user, err := u.GetUserByName(username_)
 	if err != nil {
 		return user, err
 	}
-
-	// Get user based on username and password
-	result := r.collection.FindOne(ctx, bson.M{"username": username_, "password": hashedPassword}, options.FindOne())
-	if result != nil {
-		return user, errors.New("there is no data")
-	}
-
-	if err = result.Decode(&user); err != nil {
+	// Matching password
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password_)); err != nil {
 		return user, err
-	}
-
-	// Check user condition
-	if user.IsLoggedIn {
-		return user, errors.New("user already logged in")
-	}
-	// Update logged in condition
-	_, err = r.collection.UpdateByID(ctx, user.Id, bson.M{"is_logged_in": true})
-	if err != nil {
-		return model.User{}, err
 	}
 
 	return user, nil
+}
+
+func (u *UserRepository) UpdateLoggedIn(userId_ primitive.ObjectID, condition_ bool) error {
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	// Update logged in condition
+	return util.GetError(u.collection.UpdateByID(ctx, userId_, bson.M{"$set": bson.M{"is_logged_in": condition_}}))
+}
+
+func (u *UserRepository) IsLoggedIn(userId_ primitive.ObjectID) error {
+	user, err := u.GetUserById(userId_)
+	if err != nil {
+		return err
+	}
+
+	if !user.IsLoggedIn {
+		return errors.New("user not logged in")
+	}
+
+	return nil
+}
+
+func (u *UserRepository) getUserByFilter(filter_ any) (model.User, error) {
+	user := model.User{}
+	// Create Timeout context
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	// Get
+	result := u.collection.FindOne(ctx, filter_, options.FindOne())
+	if result == nil {
+		return user, errors.New("user not found")
+	}
+
+	// Decode
+	err := result.Decode(&user)
+	return user, err
+}
+
+func (u *UserRepository) removeUserByFilter(filter_ any) (model.User, error) {
+	user := model.User{}
+	// Create Context
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	// Find and Delete
+	result := u.collection.FindOneAndDelete(ctx, filter_, options.FindOneAndDelete())
+	if result == nil {
+		return user, errors.New("user not found")
+	}
+
+	// Decode
+	err := result.Decode(&user)
+	return user, err
+}
+
+func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) (model.ResponseID, error) {
+	// Create context
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	// Update modified_at field
+	user_.UpdateModifiedTime()
+
+	// Replace
+	result, err := u.collection.ReplaceOne(ctx, filter_, *user_, options.Replace())
+	if err != nil {
+		return model.NullResponseID(), err
+	}
+
+	return model.NewResponseID(result.UpsertedID.(primitive.ObjectID)), nil
+}
+
+func (u *UserRepository) isExist(user_ *model.User) bool {
+	_, err := u.GetUserByName(user_.Username)
+	if err != nil {
+		return false
+	}
+
+	return true
 }

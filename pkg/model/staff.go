@@ -2,8 +2,9 @@ package model
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
-type Teacher struct {
-	Id          primitive.ObjectID `json:"id" bson:"_id"`
+type Staff struct {
+	Id          primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
+	Name        string             `json:"name" bson:"name"`
 	Jabatan     InstitutePosition  `json:"jabatan" bson:"jabatan"`
 	DataPribadi Personal           `json:"data_pribadi" bson:"data_pribadi"`
 	Pendidikan  Education          `json:"pendidikan" bson:"pendidikan"`
@@ -17,8 +18,8 @@ type InstitutePosition struct {
 }
 
 type HomeRoomTeacher struct {
-	Kelas uint8 `json:"kelas" bson:"kelas"`
-	Abjad byte  `json:"abjad" bson:"abjad"`
+	Kelas uint8  `json:"kelas" bson:"kelas"`
+	Abjad string `json:"abjad" bson:"abjad"`
 }
 
 type Personal struct {
@@ -39,7 +40,3 @@ type Education struct {
 	Jurusan     string `json:"jurusan" bson:"jurusan"`
 	Lulusan     uint16 `json:"lulusan" bson:"lulusan"`
 }
-
-type Position uint8
-
-const ()
