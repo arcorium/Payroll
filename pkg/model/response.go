@@ -16,18 +16,22 @@ func NewResponseID(id_ primitive.ObjectID) ResponseID {
 	return ResponseID{Id: id_}
 }
 
-type Response struct {
+type ErrorResponse struct {
 	Status  string `json:"status" bson:"status"`
 	Message string `json:"error" bson:"error"`
-	Data    any    `json:"data,omitempty" bson:"data,omitempty"`
 }
 
-func NewSuccessResponse(status_ string, msg_ string, data_ any) Response {
-	return Response{Status: status_, Message: msg_, Data: data_}
+type SuccessResponse struct {
+	Status string `json:"status" bson:"status"`
+	Data   any    `json:"data" bson:"data"`
 }
 
-func NewErrorResponse(status_ string, msg_ string) Response {
-	return Response{Status: status_, Message: msg_}
+func NewSuccessResponse(status_ string, data_ any) SuccessResponse {
+	return SuccessResponse{Status: status_, Data: data_}
+}
+
+func NewErrorResponse(status_ string, msg_ string) ErrorResponse {
+	return ErrorResponse{Status: status_, Message: msg_}
 }
 
 type ResponseToken struct {

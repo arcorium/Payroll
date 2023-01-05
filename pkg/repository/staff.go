@@ -127,3 +127,9 @@ func (t *StaffRepository) editStaffByFilter(filter_ any, teacher_ *model.Staff) 
 
 	return model.NewResponseID(result.UpsertedID.(primitive.ObjectID)), nil
 }
+
+// Add Teach Time Details
+
+//func (t *StaffRepository) AddTeachTime(staffId_ primitive.ObjectID, details_ *model.TeachTimeDetail) (primitive.ObjectID, error) {
+//
+//}

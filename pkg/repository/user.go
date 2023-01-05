@@ -10,7 +10,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
-	"log"
 )
 
 type UserRepository struct {
@@ -22,35 +21,31 @@ func NewUserRepository(db_ *dbutil.Database, collectionName_ string) UserReposit
 	return UserRepository{db: db_, collection: db_.DB.Collection(collectionName_, options.Collection())}
 }
 
-func (u *UserRepository) AddUser(user_ *model.User) (model.ResponseID, error) {
+func (u *UserRepository) AddUser(user_ *model.User) (primitive.ObjectID, error) {
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
 
 	// Give Default Value
-	user_.SetDefaultValue(util.GetValue(primitive.ObjectIDFromHex("0")))
-
-	// TODO: Get teacher if there is not, return err
-	// TODO: Get user with same teacher objectId, if is there then return err
+	user_.SetDefaultValue()
 
 	// Check existence
 	if u.isExist(user_) {
-		log.Println("Data already found!")
-		return model.NullResponseID(), errors.New("data already exists")
+		return primitive.NilObjectID, errors.New("data already exists")
 	}
 
 	// Hash password
 	hashedPassword, err := util.Hash(user_.Password)
 	if err != nil {
-		return model.NullResponseID(), err
+		return primitive.NilObjectID, err
 	}
 	user_.Password = hashedPassword
 
 	res, err := u.collection.InsertOne(ctx, *user_, options.InsertOne())
 	if err != nil {
-		return model.NullResponseID(), err
+		return primitive.NilObjectID, err
 	}
 
-	return model.NewResponseID(res.InsertedID.(primitive.ObjectID)), err
+	return res.InsertedID.(primitive.ObjectID), err
 }
 
 func (u *UserRepository) RemoveUserById(id_ primitive.ObjectID) (model.User, error) {
@@ -93,11 +88,11 @@ func (u *UserRepository) GetUsers() ([]model.User, error) {
 	return users, nil
 }
 
-func (u *UserRepository) EditUserById(id_ primitive.ObjectID, user_ *model.User) (model.ResponseID, error) {
+func (u *UserRepository) EditUserById(id_ primitive.ObjectID, user_ *model.User) (primitive.ObjectID, error) {
 	return u.editUserByFilter(bson.M{"_id": id_}, user_)
 }
 
-func (u *UserRepository) EditUserByName(username_ string, user_ *model.User) (model.ResponseID, error) {
+func (u *UserRepository) EditUserByName(username_ string, user_ *model.User) (primitive.ObjectID, error) {
 	return u.editUserByFilter(bson.M{"username": username_}, user_)
 }
 
@@ -108,11 +103,9 @@ func (u *UserRepository) ValidateUser(username_ string, password_ string) (model
 		return user, err
 	}
 	// Matching password
-	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password_)); err != nil {
-		return user, err
-	}
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password_))
 
-	return user, nil
+	return user, err
 }
 
 func (u *UserRepository) UpdateLoggedIn(userId_ primitive.ObjectID, condition_ bool) error {
@@ -170,7 +163,7 @@ func (u *UserRepository) removeUserByFilter(filter_ any) (model.User, error) {
 	return user, err
 }
 
-func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) (model.ResponseID, error) {
+func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) (primitive.ObjectID, error) {
 	// Create context
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
@@ -181,17 +174,12 @@ func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) (model
 	// Replace
 	result, err := u.collection.ReplaceOne(ctx, filter_, *user_, options.Replace())
 	if err != nil {
-		return model.NullResponseID(), err
+		return primitive.NilObjectID, err
 	}
 
-	return model.NewResponseID(result.UpsertedID.(primitive.ObjectID)), nil
+	return result.UpsertedID.(primitive.ObjectID), nil
 }
 
 func (u *UserRepository) isExist(user_ *model.User) bool {
-	_, err := u.GetUserByName(user_.Username)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return util.GetError(u.GetUserByName(user_.Username)) == nil
 }
