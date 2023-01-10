@@ -13,27 +13,27 @@ func (a *API) RegisterUser(c *fiber.Ctx) error {
 	user := model.User{}
 	// Parse body
 	if err := c.BodyParser(&user); err != nil {
-		return err
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to parse body")
 	}
 
 	// Check body field
 	if util.IsEmpty(user.Username) || util.IsEmpty(user.Password) {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, "body is not satisfied")
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
 	}
 
 	// Pass data into repository
 	id, err := a.userRepo.AddUser(&user)
 	if err != nil {
-		return err
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "user already registered")
 	}
 
 	// Response
-	return SendSuccessResponse(c, fiber.StatusCreated, model.ResponseID{Id: id})
+	return SendSuccessResponse(c, fiber.StatusCreated, model.NewResponseID(id))
 }
 
 func (a *API) RemoveUserByName(c *fiber.Ctx) error {
 	// Parameter check
-	username := c.Params("username")
+	username := c.Params("name")
 	if len(username) < 1 {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, "parameter is not satisfied")
 	}
@@ -45,7 +45,7 @@ func (a *API) RemoveUserByName(c *fiber.Ctx) error {
 	}
 
 	// Response
-	return SendSuccessResponse(c, fasthttp.StatusOK, model.ResponseID{Id: user.Id})
+	return SendSuccessResponse(c, fasthttp.StatusOK, model.NewResponseID(user.Id))
 }
 
 func (a *API) RemoveUserById(c *fiber.Ctx) error {
@@ -68,13 +68,13 @@ func (a *API) RemoveUserById(c *fiber.Ctx) error {
 	}
 
 	// Response
-	return SendSuccessResponse(c, fasthttp.StatusOK, model.ResponseID{Id: user.Id})
+	return SendSuccessResponse(c, fasthttp.StatusOK, model.NewResponseID(user.Id))
 }
 
 // GetUserByName get user by the username from uri parameter
 func (a *API) GetUserByName(c *fiber.Ctx) error {
 	// Parameter check
-	username := c.Params("username")
+	username := c.Params("name")
 	if len(username) < 1 {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, "parameter is not satisfied")
 	}
@@ -126,8 +126,8 @@ func (a *API) GetUsers(c *fiber.Ctx) error {
 
 func (a *API) UpdateUserByName(c *fiber.Ctx) error {
 	// Parameter check
-	username := c.Params("username")
-	if len(username) < 1 {
+	username := c.Params("name")
+	if util.IsEmpty(username) {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, "parameter is not satisfied")
 	}
 
@@ -138,19 +138,19 @@ func (a *API) UpdateUserByName(c *fiber.Ctx) error {
 	}
 
 	// Pass data into repository
-	id, err := a.userRepo.EditUserByName(username, &user)
+	err := a.userRepo.EditUserByName(username, &user)
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusNotModified, "user not found")
 	}
 
 	// Response
-	return SendSuccessResponse(c, fasthttp.StatusOK, model.ResponseID{Id: id})
+	return SendSuccessResponse(c, fasthttp.StatusOK, nil)
 }
 
 func (a *API) UpdateUserById(c *fiber.Ctx) error {
 	// Parameter check
 	id := c.Params("id")
-	if len(id) < 1 {
+	if util.IsEmpty(id) {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, "parameter is not satisfied")
 	}
 
@@ -167,11 +167,11 @@ func (a *API) UpdateUserById(c *fiber.Ctx) error {
 	}
 
 	// Pass data into repository
-	responseId, err := a.userRepo.EditUserById(objectId, &user)
+	err = a.userRepo.EditUserById(objectId, &user)
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusNotModified, "user not found")
 	}
 
 	// Response
-	return SendSuccessResponse(c, fasthttp.StatusOK, model.ResponseID{Id: responseId})
+	return SendSuccessResponse(c, fasthttp.StatusOK, nil)
 }

@@ -32,12 +32,21 @@ func (t *TokenRepository) AddToken(token_ *model.Token) (model.ResponseID, error
 	return model.NewResponseID(result.InsertedID.(primitive.ObjectID)), nil
 }
 
+// UpsertTokenByUserId returned token will be nil if it inserting new data
+func (t *TokenRepository) UpsertTokenByUserId(userId_ primitive.ObjectID, token_ *model.Token) (model.Token, error) {
+	return t.upsertTokenByFilter(bson.M{"user_id": userId_}, bson.M{"refresh_token": token_.Token})
+}
+
 func (t *TokenRepository) RemoveTokenByToken(token_ string) (model.Token, error) {
 	return t.removeTokenByFilter(bson.M{"refresh_token": token_})
 }
 
 func (t *TokenRepository) RemoveTokenById(id_ primitive.ObjectID) (model.Token, error) {
 	return t.removeTokenByFilter(bson.M{"_id": id_})
+}
+
+func (t *TokenRepository) RemoveTokenByUserId(userId_ primitive.ObjectID) (model.Token, error) {
+	return t.removeTokenByFilter(bson.M{"user_id": userId_})
 }
 
 func (t *TokenRepository) UpdateToken(token_ string, newToken_ string) error {
@@ -59,11 +68,15 @@ func (t *TokenRepository) UpdateToken(token_ string, newToken_ string) error {
 	return nil
 }
 
-func (t *TokenRepository) ValidateToken(token_ string) (model.Token, error) {
-	return t.getToken(token_)
+func (t *TokenRepository) GetTokenByUserId(userId_ primitive.ObjectID) (model.Token, error) {
+	return t.getTokenByFilter(bson.M{"user_id": userId_})
 }
 
-func (t *TokenRepository) getToken(token_ string) (model.Token, error) {
+func (t *TokenRepository) GetTokenByToken(token_ string) (model.Token, error) {
+	return t.getTokenByFilter(bson.M{"refresh_token": token_})
+}
+
+func (t *TokenRepository) getTokenByFilter(filter_ any) (model.Token, error) {
 	token := model.Token{}
 
 	// Create timeout context
@@ -71,10 +84,7 @@ func (t *TokenRepository) getToken(token_ string) (model.Token, error) {
 	defer cancel()
 
 	// Querying
-	result := t.collection.FindOne(ctx, bson.M{"refresh_token": token_}, options.FindOne())
-	if result == nil {
-		return token, errors.New("token not found")
-	}
+	result := t.collection.FindOne(ctx, filter_, options.FindOne())
 
 	// Decode
 	err := result.Decode(&token)
@@ -95,6 +105,18 @@ func (t *TokenRepository) removeTokenByFilter(filter_ any) (model.Token, error) 
 	}
 
 	// Decode into token structure
+	err := result.Decode(&token)
+	return token, err
+}
+
+func (t *TokenRepository) upsertTokenByFilter(filter_ any, update_ any) (model.Token, error) {
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	// When filter is not found, it will insert new data with filter field and field after $set
+	token := model.Token{}
+	result := t.collection.FindOneAndUpdate(ctx, filter_, bson.M{"$set": update_}, options.FindOneAndUpdate().SetUpsert(true))
+
 	err := result.Decode(&token)
 	return token, err
 }

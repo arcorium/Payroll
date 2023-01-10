@@ -129,7 +129,16 @@ func (t *StaffRepository) editStaffByFilter(filter_ any, teacher_ *model.Staff) 
 }
 
 // Add Teach Time Details
+func (t *StaffRepository) AddTeachTime(staffId_ primitive.ObjectID, details_ *model.TeachTimeDetail) (primitive.ObjectID, error) {
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
 
-//func (t *StaffRepository) AddTeachTime(staffId_ primitive.ObjectID, details_ *model.TeachTimeDetail) (primitive.ObjectID, error) {
-//
-//}
+	// Push array
+	update := bson.M{"$push": *details_}
+	result, err := t.collection.UpdateByID(ctx, staffId_, update, options.Update())
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	return result.UpsertedID.(primitive.ObjectID), nil
+}

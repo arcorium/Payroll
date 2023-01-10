@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
-	"log"
 )
 
 func (a *API) Login(c *fiber.Ctx) error {
@@ -19,7 +18,7 @@ func (a *API) Login(c *fiber.Ctx) error {
 	}
 
 	if util.IsEmpty(user.Username) || util.IsEmpty(user.Password) {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, "body is not satisfied")
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
 	}
 
 	// Validate user with the username and password
@@ -28,17 +27,12 @@ func (a *API) Login(c *fiber.Ctx) error {
 		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "user not found")
 	}
 
-	// Prevent multi-login user
-	if user.IsLoggedIn {
-		return SendErrorResponse(c, fasthttp.StatusConflict, "user already logged in")
-	}
-
 	// JWT
 	claims := jwt.MapClaims{}
 
 	refreshToken, err := util.GenerateRefreshToken(claims)
 	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "can't create rtoken")
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_RTOKEN)
 	}
 	// claims
 	claims = jwt.MapClaims{
@@ -50,78 +44,58 @@ func (a *API) Login(c *fiber.Ctx) error {
 
 	accessToken, err := util.GenerateAccessToken(claims)
 	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "can't create atoken")
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_ATOKEN)
 	}
 
 	// Load token to database
 	token := model.Token{Token: refreshToken, UserId: user.Id}
-	_, err = a.tokenRepo.AddToken(&token)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "can't update token into database")
-	}
+	// either update or inserting data
+	token, err = a.tokenRepo.UpsertTokenByUserId(user.Id, &token)
 
 	// Set into logged in
 	err = a.userRepo.UpdateLoggedIn(user.Id, true)
 
-	// Set refresh token and access token in cookie
-	refreshCookie, accessCookie := GenerateTokenCookie(refreshToken, accessToken)
-	SetCookies(c, refreshCookie, accessCookie)
+	// Set refresh token in cookie and response access token
+	refreshCookie := GenerateTokenCookie(refreshToken)
+	SetCookies(c, refreshCookie)
+	response := model.ResponseToken{UserId: user.Id.Hex(), AccessToken: accessToken}
 
-	response := model.ResponseToken{RefreshToken: refreshToken, AccessToken: accessToken}
 	return SendSuccessResponse(c, fasthttp.StatusOK, response)
 }
 
 func (a *API) Logout(c *fiber.Ctx) error {
 	SetDefaultContext(c)
 
-	token := model.Token{}
-	var err error
-	if err = c.BodyParser(&token); err != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, "body is not satisfied")
+	refreshToken := c.Cookies(util.JWT_COOKIE_REFRESH_NAME, "")
+	if util.IsEmpty(refreshToken) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "rtoken doesn't found")
 	}
 
-	if util.IsEmpty(token.Token) {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, "body is not satisfied")
-	}
-
-	// Remove JWT from database
-	token, err = a.tokenRepo.RemoveTokenByToken(token.Token)
+	// Remove token
+	token, err := a.tokenRepo.RemoveTokenByToken(refreshToken)
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusNotFound, "token not found")
 	}
 
-	// Get user from database by the id
-	user, err := a.userRepo.GetUserById(token.UserId)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "user not found")
-	}
-
-	// Don't logout user that not logged in
-	if !user.IsLoggedIn {
-		return SendErrorResponse(c, fasthttp.StatusConflict, "user is not logged in yet")
-	}
-
-	err = a.userRepo.UpdateLoggedIn(user.Id, false)
+	err = a.userRepo.UpdateLoggedIn(token.UserId, false)
 
 	// Clear cookies
-	DeleteCookies(c, util.JWT_COOKIE_REFRESH_NAME, util.JWT_COOKIE_ACCESS_NAME)
+	DeleteCookies(c, util.JWT_COOKIE_REFRESH_NAME)
 
-	return SendSuccessResponse(c, fasthttp.StatusOK, model.ResponseID{Id: user.Id})
+	return SendSuccessResponse(c, fasthttp.StatusOK, model.NewResponseID(token.UserId))
 }
 
 func (a *API) RequestToken(c *fiber.Ctx) error {
 	SetDefaultContext(c)
 
 	// old refresh token
-	token := model.Token{}
-
-	// Parse body
-	if err := c.BodyParser(&token); err != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, "body is not satisfied")
+	cookie := c.Cookies(util.JWT_COOKIE_REFRESH_NAME, "")
+	if util.IsEmpty(cookie) {
+		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "data is not satisfied")
 	}
 
 	// Get token
-	token, err := a.tokenRepo.ValidateToken(token.Token)
+	token, err := a.tokenRepo.GetTokenByToken(cookie)
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusNotFound, "token not found")
 	}
@@ -137,7 +111,7 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 
 	refreshToken, err := util.GenerateRefreshToken(claims)
 	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "can't create rtoken")
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_RTOKEN)
 	}
 
 	// claims
@@ -148,20 +122,31 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 		"admin":      user.Type == model.Admin,
 	}
 	accessToken, err := util.GenerateAccessToken(claims)
+	if err != nil {
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_ATOKEN)
+	}
 
 	// Invalidate last token by updating the token
 	err = a.tokenRepo.UpdateToken(token.Token, refreshToken)
 	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "can't update token")
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to update token")
 	}
 
 	// Set refresh token and access token in cookie
-	refreshCookie, accessCookie := GenerateTokenCookie(refreshToken, accessToken)
-	SetCookies(c, refreshCookie, accessCookie)
+	refreshCookie := GenerateTokenCookie(refreshToken)
+	SetCookies(c, refreshCookie)
 
 	// Response
-	response := model.ResponseToken{RefreshToken: refreshToken, AccessToken: accessToken}
+	response := model.ResponseToken{AccessToken: accessToken}
 	return SendSuccessResponse(c, fasthttp.StatusOK, response)
+}
+
+func (a *API) ImportDataFromExcel(c *fiber.Ctx) error {
+	return SendSuccessResponse(c, fasthttp.StatusAccepted, nil)
+}
+
+func (a *API) ExportDataToExcel(c *fiber.Ctx) error {
+	return SendSuccessResponse(c, fasthttp.StatusOK, nil)
 }
 
 // validateAuthorization middleware to check claims in jwt on key "authorized" and
@@ -173,7 +158,6 @@ func (a *API) validateAuthorization() fiber.Handler {
 		claims := token.Claims.(jwt.MapClaims)
 
 		if !claims["authorized"].(bool) {
-			log.Println("not authorized")
 			return SendErrorResponse(c, fasthttp.StatusUnauthorized, "account not eligible")
 		}
 

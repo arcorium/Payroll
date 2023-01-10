@@ -38,20 +38,24 @@ func SetDefaultContext(c *fiber.Ctx, accepts_ ...string) {
 	c.AcceptsEncodings("compress", "br")
 }
 
-func GenerateTokenCookie(refreshToken_ string, accessToken_ string) (*fiber.Cookie, *fiber.Cookie) {
-	refreshCookie := GenerateCookie(util.JWT_COOKIE_REFRESH_NAME, refreshToken_, time.Now().Add(util.JWT_COOKIE_REFRESH_TIMEOUT))
-	accessCookie := GenerateCookie(util.JWT_COOKIE_ACCESS_NAME, accessToken_, time.Now().Add(util.JWT_COOKIE_ACCESS_TIMEOUT))
+func GenerateTokenCookie(refreshToken_ string) *fiber.Cookie {
+	refreshCookie := GenerateCookie(util.JWT_COOKIE_REFRESH_NAME, refreshToken_, time.Now().Add(util.JWT_COOKIE_REFRESH_TIMEOUT), "/api/v1/users/")
 
-	return refreshCookie, accessCookie
+	return refreshCookie
 }
 
-func GenerateCookie(key_ string, value_ string, expiration_ time.Time) *fiber.Cookie {
+func GenerateCookie(key_ string, value_ string, expiration_ time.Time, path_ ...string) *fiber.Cookie {
 	cookie := new(fiber.Cookie)
 	cookie.Expires = expiration_
 	cookie.Name = key_
 	cookie.Value = value_
 	cookie.HTTPOnly = true
 
+	if path_ == nil {
+		cookie.Path = "/"
+	} else {
+		cookie.Path = path_[0]
+	}
 	return cookie
 }
 
@@ -70,4 +74,12 @@ func SetCookies(c *fiber.Ctx, cookies_ ...*fiber.Cookie) {
 const (
 	CONDITION_ERROR   = "error"
 	CONDITION_SUCCESS = "success"
+)
+
+const (
+	RESPONSE_MSG_PARAMETER = "parameter is not satisfied"
+	RESPONSE_MSG_BODY      = "body is not satisfied"
+	RESPONSE_MSG_MALFORM   = "malformed id"
+	RESPONSE_MSG_RTOKEN    = "failed to generate refresh token"
+	RESPONSE_MSG_ATOKEN    = "failed to geneate access token"
 )

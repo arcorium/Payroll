@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
@@ -35,53 +36,55 @@ func (a *API) HandleAPI() {
 
 	// Middleware
 	a.app.Use(logger.New(logger.Config{}))
+	a.app.Use(cors.New(cors.Config{}))
 
 	// api/v1
-	api := a.app.Group("/api/v1")
+	v1 := a.app.Group("/api/v1")
 
-	api.Post("/login", a.Login)
-	api.Post("/req_token", a.RequestToken)
-
-	api.Use(jwtware.New(jwtware.Config{
+	// api/v1/user
+	userApi := v1.Group("/users")
+	// Core
+	userApi.Post("/login", a.Login)
+	userApi.Post("/req-token", a.RequestToken)
+	userApi.Use(jwtware.New(jwtware.Config{
 		SigningKey: []byte(util.JWT_REFRESH_SECRET_KEY),
 		//KeyFunc:       a.jwtValidateToken,
 		ErrorHandler:  a.jwtErrorHandler,
 		SigningMethod: util.JWT_SIGNING_METHOD},
 	), a.validateAuthorization())
-
-	api.Post("/logout", a.Logout)
-	// api/v1/user
-	userApi := api.Group("/user", a.superOnly())
+	userApi.Post("/logout", a.Logout)
 	// Create
+	userApi.Use(a.superOnly())
 	userApi.Post("/", a.RegisterUser)
 	// Delete
 	userApi.Delete("/id/:id", a.RemoveUserById)
-	userApi.Delete("/name/:username", a.RemoveUserByName)
+	userApi.Delete("/name/:name", a.RemoveUserByName)
 	// Get
 	userApi.Get("/id/:id", a.GetUserById)
-	userApi.Get("/name/:username", a.GetUserByName)
+	userApi.Get("/name/:name", a.GetUserByName)
 	userApi.Get("/", a.GetUsers)
 	// Edit
 	userApi.Put("/id/:id", a.UpdateUserById)
-	userApi.Put("/name/:username", a.UpdateUserByName)
+	userApi.Put("/name/:name", a.UpdateUserByName)
 
 	// api/v1/teacher
-	teacherApi := api.Group("/teacher")
+	staffApi := v1.Group("/staffs")
 	// Create
-	teacherApi.Post("/", a.RegisterStaff)
+	staffApi.Post("/", a.RegisterStaff)
 	// Delete
-	teacherApi.Delete("/id/:id:", a.RemoveStaffById)
-	teacherApi.Delete("/name/:username:", a.RemoveStaffByName)
+	staffApi.Delete("/id/:id:", a.RemoveStaffById)
+	staffApi.Delete("/name/:name:", a.RemoveStaffByName)
 	// Get
-	teacherApi.Get("/id/:id:", a.GetStaffById)
-	teacherApi.Get("/name/:name:", a.GetStaffByName)
-	teacherApi.Get("/", a.GetStaffs)
+	staffApi.Get("/id/:id:", a.GetStaffById)
+	staffApi.Get("/name/:name:", a.GetStaffByName)
+	staffApi.Get("/", a.GetStaffs)
 	// Edit
-	teacherApi.Put("/id/:id:", a.UpdateStaffById)
-	teacherApi.Put("/name/:name:", a.UpdateStaffByName)
+	updateStaffApi := staffApi.Put("/id/:id:", a.UpdateStaffById)
+	updateStaffApi.Post("/teach", a.InsertTeachTime)
+	staffApi.Put("/name/:name:", a.UpdateStaffByName)
 
 	// api/v1/teacher/pos/
-	positionApi := teacherApi.Group("/pos")
+	positionApi := staffApi.Group("/positions")
 	// Create
 	positionApi.Post("/", a.RegisterPosition)
 	// Delete

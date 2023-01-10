@@ -29,9 +29,9 @@ func (u *UserRepository) AddUser(user_ *model.User) (primitive.ObjectID, error) 
 	user_.SetDefaultValue()
 
 	// Check existence
-	if u.isExist(user_) {
-		return primitive.NilObjectID, errors.New("data already exists")
-	}
+	//if u.isExist(user_) {
+	//	return primitive.NilObjectID, errors.New("data already exists")
+	//}
 
 	// Hash password
 	hashedPassword, err := util.Hash(user_.Password)
@@ -88,11 +88,11 @@ func (u *UserRepository) GetUsers() ([]model.User, error) {
 	return users, nil
 }
 
-func (u *UserRepository) EditUserById(id_ primitive.ObjectID, user_ *model.User) (primitive.ObjectID, error) {
+func (u *UserRepository) EditUserById(id_ primitive.ObjectID, user_ *model.User) error {
 	return u.editUserByFilter(bson.M{"_id": id_}, user_)
 }
 
-func (u *UserRepository) EditUserByName(username_ string, user_ *model.User) (primitive.ObjectID, error) {
+func (u *UserRepository) EditUserByName(username_ string, user_ *model.User) error {
 	return u.editUserByFilter(bson.M{"username": username_}, user_)
 }
 
@@ -163,7 +163,7 @@ func (u *UserRepository) removeUserByFilter(filter_ any) (model.User, error) {
 	return user, err
 }
 
-func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) (primitive.ObjectID, error) {
+func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) error {
 	// Create context
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
@@ -171,13 +171,24 @@ func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) (primi
 	// Update modified_at field
 	user_.UpdateModifiedTime()
 
-	// Replace
-	result, err := u.collection.ReplaceOne(ctx, filter_, *user_, options.Replace())
-	if err != nil {
-		return primitive.NilObjectID, err
+	// Check updated field
+	if !util.IsEmpty(user_.Password) {
+		var err error
+		user_.Password, err = util.Hash(user_.Password)
+		if err != nil {
+			return err
+		}
 	}
 
-	return result.UpsertedID.(primitive.ObjectID), nil
+	// marshalling
+	update, err := util.GenerateBsonObject(*user_)
+	if err != nil {
+		return err
+	}
+	// Replace
+	_, err = u.collection.UpdateOne(ctx, filter_, bson.M{"$set": update}, options.Update())
+
+	return err
 }
 
 func (u *UserRepository) isExist(user_ *model.User) bool {

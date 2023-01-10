@@ -2,8 +2,10 @@ package controller
 
 import (
 	"Penggajian/pkg/model"
+	"Penggajian/pkg/util"
 	"errors"
 	"github.com/gofiber/fiber/v2"
+	"github.com/valyala/fasthttp"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -12,7 +14,7 @@ func (a *API) RegisterStaff(c *fiber.Ctx) error {
 
 	// Parse body
 	if err := c.BodyParser(&teacher); err != nil {
-		return err
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to parse body")
 	}
 
 	// Response
@@ -174,4 +176,26 @@ func (a *API) UpdateStaffById(c *fiber.Ctx) error {
 	// Response
 	err = c.JSON(response)
 	return err
+}
+
+func (a *API) InsertTeachTime(c *fiber.Ctx) error {
+	id := c.Params("id")
+	if util.IsEmpty(id) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "parameter is not satisfied")
+	}
+
+	// Parse id
+	objectId, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "malformed id")
+	}
+
+	// Parse body
+	teachDetails := model.TeachTimeDetail{}
+	if c.BodyParser(&teachDetails) != nil {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "body is not satisfied")
+	}
+
+	objectId, err = a.staffRepo.AddTeachTime(objectId, &teachDetails)
+	return SendSuccessResponse(c, fasthttp.StatusCreated, model.NewResponseID(objectId))
 }

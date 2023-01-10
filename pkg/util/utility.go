@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"github.com/golang-jwt/jwt/v4"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 	"time"
 )
@@ -68,4 +69,19 @@ func GenerateAccessToken(claims_ jwt.Claims) (string, error) {
 
 	res, err := token.SignedString([]byte(JWT_ACCESS_SECRET_KEY))
 	return res, err
+}
+
+func GenerateBsonObject(data_ any) (bson.M, error) {
+	update := bson.M{}
+	marshalled, err := bson.Marshal(data_)
+	if err != nil {
+		return update, err
+	}
+
+	err = bson.Unmarshal(marshalled, &update)
+	if err != nil {
+		return update, err
+	}
+
+	return update, nil
 }

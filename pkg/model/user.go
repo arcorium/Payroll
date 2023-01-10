@@ -8,10 +8,10 @@ import (
 
 type User struct {
 	Id         primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
-	Type       UserType           `json:"type,omitempty" bson:"type"`
-	Username   string             `json:"username,omitempty" bson:"username"`
-	Password   string             `json:"password" bson:"password"`
-	IsLoggedIn bool               `json:"is_logged_in,omitempty" bson:"is_logged_in"`
+	Type       UserType           `json:"type,omitempty" bson:"type,omitempty"`
+	Username   string             `json:"username,omitempty" bson:"username,omitempty"`
+	Password   string             `json:"password" bson:"password,omitempty"`
+	IsLoggedIn bool               `json:"is_logged_in,omitempty" bson:"is_logged_in,omitempty"`
 
 	CreatedAt  time.Time `json:"created_at,omitempty" bson:"created_at,omitempty"`
 	ModifiedAt time.Time `json:"modified_at,omitempty" bson:"modified_at,omitempty"`

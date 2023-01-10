@@ -5,15 +5,15 @@ import (
 )
 
 type ResponseID struct {
-	Id primitive.ObjectID `json:"id" bson:"_id"`
+	Id string `json:"id" bson:"_id"`
 }
 
 func NullResponseID() ResponseID {
-	return ResponseID{Id: primitive.NilObjectID}
+	return ResponseID{Id: ""}
 }
 
 func NewResponseID(id_ primitive.ObjectID) ResponseID {
-	return ResponseID{Id: id_}
+	return ResponseID{Id: id_.Hex()}
 }
 
 type ErrorResponse struct {
@@ -35,6 +35,7 @@ func NewErrorResponse(status_ string, msg_ string) ErrorResponse {
 }
 
 type ResponseToken struct {
-	RefreshToken string `json:"refresh_token" bson:"refresh_token"`
-	AccessToken  string `json:"access_token" bson:"access_token"`
+	UserId       string `json:"user_id,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
 }
