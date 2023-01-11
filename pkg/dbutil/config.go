@@ -11,6 +11,7 @@ type DBConfig struct {
 	DatabaseURI         string
 	MigrationCollection string
 	BindAddress         string
+	SecretKey           string
 }
 
 func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
@@ -21,8 +22,9 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 
 	bindIp := os.Getenv("BIND_IP")
 	bindPort := os.Getenv("BIND_PORT")
+	secretKey := os.Getenv("SECRET_KEY")
 
-	if util.IsEmpty(bindIp) || util.IsEmpty(bindPort) {
+	if util.IsEmpty(bindIp) || util.IsEmpty(bindPort) || util.IsEmpty(secretKey) {
 		return config, err
 	}
 
@@ -39,6 +41,7 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 	config.DatabaseName = dbName_
 	config.MigrationCollection = migrationCollection_
 	config.BindAddress = bindAddr
+	config.SecretKey = secretKey
 
 	fmt.Println(config.DatabaseURI)
 

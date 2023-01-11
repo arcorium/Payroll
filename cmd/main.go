@@ -22,13 +22,16 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// Set secret key
+	//util.JWT_REFRESH_SECRET_KEY = conf.SecretKey
+
 	// Repository
 	userRepo := repository.NewUserRepository(&db, "user")
 	staffRepo := repository.NewStaffRepository(&db, "teacher")
 	positionRepo := repository.NewPositionRepository(&db, "position")
 	tokenRepo := repository.NewTokenRepository(&db, "token")
 
-	api := controller.NewAPI(app, &db, &userRepo, &staffRepo, &positionRepo, &tokenRepo)
+	api := controller.NewAPI(app, &conf, &db, &userRepo, &staffRepo, &positionRepo, &tokenRepo)
 	api.HandleAPI()
 
 	log.Println(api.Start(conf.BindAddress))

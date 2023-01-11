@@ -30,7 +30,7 @@ func (a *API) Login(c *fiber.Ctx) error {
 	// JWT
 	claims := jwt.MapClaims{}
 
-	refreshToken, err := util.GenerateRefreshToken(claims)
+	refreshToken, err := util.GenerateRefreshToken(claims, []byte(a.config.SecretKey))
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_RTOKEN)
 	}
@@ -42,7 +42,7 @@ func (a *API) Login(c *fiber.Ctx) error {
 		"admin":      user.Type == model.Admin,
 	}
 
-	accessToken, err := util.GenerateAccessToken(claims)
+	accessToken, err := util.GenerateAccessToken(claims, []byte(a.config.SecretKey))
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_ATOKEN)
 	}
@@ -58,6 +58,7 @@ func (a *API) Login(c *fiber.Ctx) error {
 	// Set refresh token in cookie and response access token
 	refreshCookie := GenerateTokenCookie(refreshToken)
 	SetCookies(c, refreshCookie)
+
 	response := model.ResponseToken{UserId: user.Id.Hex(), AccessToken: accessToken}
 
 	return SendSuccessResponse(c, fasthttp.StatusOK, response)
@@ -109,7 +110,7 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 	// Generate new jwt
 	claims := jwt.MapClaims{}
 
-	refreshToken, err := util.GenerateRefreshToken(claims)
+	refreshToken, err := util.GenerateRefreshToken(claims, []byte(a.config.SecretKey))
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_RTOKEN)
 	}
@@ -121,7 +122,7 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 		"authorized": user.IsLoggedIn,
 		"admin":      user.Type == model.Admin,
 	}
-	accessToken, err := util.GenerateAccessToken(claims)
+	accessToken, err := util.GenerateAccessToken(claims, []byte(a.config.SecretKey))
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, RESPONSE_MSG_ATOKEN)
 	}

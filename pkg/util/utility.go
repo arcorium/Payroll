@@ -16,10 +16,8 @@ const (
 	JWT_COOKIE_REFRESH_TIMEOUT = JWT_REFRESH_TIMEOUT
 	JWT_COOKIE_ACCESS_TIMEOUT  = JWT_ACCESS_TIMEOUT
 )
+
 const (
-	JWT_REFRESH_SECRET_KEY = "m1hz4NI1sth33B3s5t"
-	//JWT_ACCESS_SECRET_KEY  = "adbwbd012831b2o0ca"
-	JWT_ACCESS_SECRET_KEY   = JWT_REFRESH_SECRET_KEY
 	JWT_SIGNING_METHOD      = "HS256"
 	JWT_COOKIE_REFRESH_NAME = "rtoken"
 	JWT_COOKIE_ACCESS_NAME  = "atoken"
@@ -49,25 +47,25 @@ func IsEmpty(data_ string) bool {
 	return len(data_) < 1
 }
 
-func GenerateRefreshToken(claims_ jwt.Claims) (string, error) {
+func GenerateRefreshToken(claims_ jwt.Claims, secretKey_ []byte) (string, error) {
 	// Add extra
 	claims := claims_.(jwt.MapClaims)
 	claims["exp"] = time.Now().Add(JWT_REFRESH_TIMEOUT).Unix()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	res, err := token.SignedString([]byte(JWT_REFRESH_SECRET_KEY))
+	res, err := token.SignedString(secretKey_)
 	return res, err
 }
 
-func GenerateAccessToken(claims_ jwt.Claims) (string, error) {
+func GenerateAccessToken(claims_ jwt.Claims, secretKey_ []byte) (string, error) {
 	// Add extra
 	claims := claims_.(jwt.MapClaims)
 	claims["exp"] = time.Now().Add(JWT_ACCESS_TIMEOUT).Unix()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	res, err := token.SignedString([]byte(JWT_ACCESS_SECRET_KEY))
+	res, err := token.SignedString(secretKey_)
 	return res, err
 }
 

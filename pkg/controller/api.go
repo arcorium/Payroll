@@ -16,8 +16,9 @@ import (
 )
 
 type API struct {
-	app *fiber.App
-	db  *dbutil.Database
+	app    *fiber.App
+	db     *dbutil.Database
+	config *dbutil.DBConfig
 
 	// Repository
 	userRepo     *repository.UserRepository
@@ -26,17 +27,19 @@ type API struct {
 	tokenRepo    *repository.TokenRepository
 }
 
-func NewAPI(app_ *fiber.App, db_ *dbutil.Database, userRepo_ *repository.UserRepository,
+func NewAPI(app_ *fiber.App, config_ *dbutil.DBConfig, db_ *dbutil.Database, userRepo_ *repository.UserRepository,
 	teacherRepo_ *repository.StaffRepository, positionRepo_ *repository.PositionRepository,
 	tokenRepo_ *repository.TokenRepository) API {
-	return API{app: app_, db: db_, userRepo: userRepo_, staffRepo: teacherRepo_, positionRepo: positionRepo_, tokenRepo: tokenRepo_}
+	return API{app: app_, db: db_, config: config_, userRepo: userRepo_, staffRepo: teacherRepo_, positionRepo: positionRepo_, tokenRepo: tokenRepo_}
 }
 
 func (a *API) HandleAPI() {
-
 	// Middleware
-	a.app.Use(logger.New(logger.Config{}))
-	a.app.Use(cors.New(cors.Config{}))
+	config := cors.ConfigDefault
+	config.AllowCredentials = true
+	config.AllowHeaders = "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin"
+	a.app.Use(cors.New(config))
+	a.app.Use(logger.New(logger.Config{Format: "[${ip}]:${port} ${status} - ${method} ${path}\n"}))
 
 	// api/v1
 	v1 := a.app.Group("/api/v1")
@@ -46,26 +49,27 @@ func (a *API) HandleAPI() {
 	// Core
 	userApi.Post("/login", a.Login)
 	userApi.Post("/req-token", a.RequestToken)
-	userApi.Use(jwtware.New(jwtware.Config{
-		SigningKey: []byte(util.JWT_REFRESH_SECRET_KEY),
+
+	authUserApi := userApi.Group("", jwtware.New(jwtware.Config{
+		SigningKey: []byte(a.config.SecretKey),
 		//KeyFunc:       a.jwtValidateToken,
 		ErrorHandler:  a.jwtErrorHandler,
 		SigningMethod: util.JWT_SIGNING_METHOD},
 	), a.validateAuthorization())
-	userApi.Post("/logout", a.Logout)
+	authUserApi.Post("/logout", a.Logout)
 	// Create
-	userApi.Use(a.superOnly())
-	userApi.Post("/", a.RegisterUser)
+	authUserApi.Use(a.superOnly())
+	authUserApi.Post("/", a.RegisterUser)
 	// Delete
-	userApi.Delete("/id/:id", a.RemoveUserById)
-	userApi.Delete("/name/:name", a.RemoveUserByName)
+	authUserApi.Delete("/id/:id", a.RemoveUserById)
+	authUserApi.Delete("/name/:name", a.RemoveUserByName)
 	// Get
-	userApi.Get("/id/:id", a.GetUserById)
-	userApi.Get("/name/:name", a.GetUserByName)
-	userApi.Get("/", a.GetUsers)
+	authUserApi.Get("/id/:id", a.GetUserById)
+	authUserApi.Get("/name/:name", a.GetUserByName)
+	authUserApi.Get("/", a.GetUsers)
 	// Edit
-	userApi.Put("/id/:id", a.UpdateUserById)
-	userApi.Put("/name/:name", a.UpdateUserByName)
+	authUserApi.Put("/id/:id", a.UpdateUserById)
+	authUserApi.Put("/name/:name", a.UpdateUserByName)
 
 	// api/v1/teacher
 	staffApi := v1.Group("/staffs")
@@ -106,13 +110,13 @@ func (a *API) Start(address_ string) error {
 func (a *API) jwtValidateToken(token_ *jwt.Token) (interface{}, error) {
 	// Validate algorithm
 	if token_.Method.Alg() != util.JWT_SIGNING_METHOD {
-		return []byte(util.JWT_ACCESS_SECRET_KEY), errors.New("wrong algorithm used")
+		return []byte(a.config.SecretKey), errors.New("wrong algorithm used")
 	}
 
 	// Validate expiration time
 	claims, ok := token_.Claims.(jwt.MapClaims)
 	if !ok {
-		return []byte(util.JWT_ACCESS_SECRET_KEY), errors.New("claims malformed")
+		return []byte(a.config.SecretKey), errors.New("claims malformed")
 	}
 
 	// Check expiration date
@@ -123,12 +127,12 @@ func (a *API) jwtValidateToken(token_ *jwt.Token) (interface{}, error) {
 	fmt.Println("Time: {}", time.Unix(time.Now().Unix(), 0))
 
 	if expired <= time.Now().Unix() {
-		return []byte(util.JWT_ACCESS_SECRET_KEY), errors.New("token expired")
+		return []byte(a.config.SecretKey), errors.New("token expired")
 	}
 
 	// Return signing key
 	// TODO: Get signing key from database
-	return []byte(util.JWT_ACCESS_SECRET_KEY), nil
+	return []byte(a.config.SecretKey), nil
 }
 
 func (a *API) jwtErrorHandler(c *fiber.Ctx, err_ error) error {
