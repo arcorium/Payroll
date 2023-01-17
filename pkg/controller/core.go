@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
+	"log"
 )
 
 func (a *API) Login(c *fiber.Ctx) error {
@@ -143,6 +144,8 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 }
 
 func (a *API) ImportDataFromExcel(c *fiber.Ctx) error {
+
+	log.Println(string(c.Body()))
 	return SendSuccessResponse(c, fasthttp.StatusAccepted, nil)
 }
 

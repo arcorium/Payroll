@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
 	"time"
@@ -43,6 +42,7 @@ func (a *API) HandleAPI() {
 
 	// api/v1
 	v1 := a.app.Group("/api/v1")
+	v1.Post("/test/", a.ImportDataFromExcel)
 
 	// api/v1/user
 	userApi := v1.Group("/users")
@@ -50,12 +50,13 @@ func (a *API) HandleAPI() {
 	userApi.Post("/login", a.Login)
 	userApi.Post("/req-token", a.RequestToken)
 
-	authUserApi := userApi.Group("", jwtware.New(jwtware.Config{
-		SigningKey: []byte(a.config.SecretKey),
-		//KeyFunc:       a.jwtValidateToken,
-		ErrorHandler:  a.jwtErrorHandler,
-		SigningMethod: util.JWT_SIGNING_METHOD},
-	), a.validateAuthorization())
+	//authUserApi := userApi.Group("", jwtware.New(jwtware.Config{
+	//	SigningKey: []byte(a.config.SecretKey),
+	//	//KeyFunc:       a.jwtValidateToken,
+	//	ErrorHandler:  a.jwtErrorHandler,
+	//	SigningMethod: util.JWT_SIGNING_METHOD},
+	//), a.validateAuthorization())
+	authUserApi := userApi.Group("")
 	authUserApi.Post("/logout", a.Logout)
 	// Create
 	authUserApi.Use(a.superOnly())
@@ -75,17 +76,15 @@ func (a *API) HandleAPI() {
 	staffApi := v1.Group("/staffs")
 	// Create
 	staffApi.Post("/", a.RegisterStaff)
-	// Delete
-	staffApi.Delete("/id/:id:", a.RemoveStaffById)
-	staffApi.Delete("/name/:name:", a.RemoveStaffByName)
 	// Get
-	staffApi.Get("/id/:id:", a.GetStaffById)
-	staffApi.Get("/name/:name:", a.GetStaffByName)
+	staffApi.Get("/:id", a.GetStaffById)
 	staffApi.Get("/", a.GetStaffs)
+	staffApi.Put("/", a.UpdateStaffById)
 	// Edit
-	updateStaffApi := staffApi.Put("/id/:id:", a.UpdateStaffById)
+	updateStaffApi := staffApi.Group("/:id")
+	// Teach Time
 	updateStaffApi.Post("/teach", a.InsertTeachTime)
-	staffApi.Put("/name/:name:", a.UpdateStaffByName)
+	updateStaffApi.Delete("/teach/:uuid", a.RemoveTeachTime)
 
 	// api/v1/teacher/pos/
 	positionApi := staffApi.Group("/positions")

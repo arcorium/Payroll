@@ -5,10 +5,12 @@ import (
 	"Penggajian/pkg/model"
 	"Penggajian/pkg/util"
 	"errors"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 )
 
 type StaffRepository struct {
@@ -20,24 +22,49 @@ func NewStaffRepository(db_ *dbutil.Database, collectionName_ string) StaffRepos
 	return StaffRepository{db: db_, collection: db_.DB.Collection(collectionName_, options.Collection())}
 }
 
-func (t *StaffRepository) AddStaff(teacher_ *model.Staff) (model.ResponseID, error) {
+func (t *StaffRepository) AddStaff(teacher_ *model.Staff) (primitive.ObjectID, error) {
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
 
-	result, err := t.collection.InsertOne(ctx, *teacher_, options.InsertOne())
-	if err != nil {
-		return model.NullResponseID(), err
+	if len(teacher_.TeachTimeDetails) < 1 {
+		teacher_.TeachTimeDetails = []model.TeachTimeDetail{}
 	}
 
-	return model.NewResponseID(result.InsertedID.(primitive.ObjectID)), nil
+	result, err := t.collection.InsertOne(ctx, *teacher_, options.InsertOne())
+	if err != nil {
+		return primitive.NilObjectID, err
+	}
+
+	return result.InsertedID.(primitive.ObjectID), nil
 }
 
-func (t *StaffRepository) RemoveStaffById(id_ primitive.ObjectID) (model.Staff, error) {
-	return t.removeStaffByFilter(bson.M{"_id": id_})
+func (t *StaffRepository) EditById(staffId_ primitive.ObjectID, staff_ *model.Staff) error {
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	update, err := util.GenerateBsonObject(*staff_)
+
+	res, err := t.collection.UpdateByID(ctx, staffId_, bson.M{"$set": update}, options.Update())
+	if err != nil {
+		return err
+	}
+	if res.ModifiedCount == 0 {
+		return errors.New("no data updated")
+	}
+
+	return nil
 }
 
-func (t *StaffRepository) RemoveStaffByName(name_ string) (model.Staff, error) {
-	return t.removeStaffByFilter(bson.M{"name": name_})
+func (t *StaffRepository) EditAndFindById(staffId_ primitive.ObjectID, staff_ *model.Staff) (model.Staff, error) {
+	staff := model.Staff{}
+
+	err := t.EditById(staffId_, staff_)
+	if err != nil {
+		return staff, err
+	}
+
+	staff, err = t.GetStaffById(staffId_)
+	return staff, err
 }
 
 func (t *StaffRepository) GetStaffByName(name_ string) (model.Staff, error) {
@@ -129,16 +156,31 @@ func (t *StaffRepository) editStaffByFilter(filter_ any, teacher_ *model.Staff) 
 }
 
 // Add Teach Time Details
-func (t *StaffRepository) AddTeachTime(staffId_ primitive.ObjectID, details_ *model.TeachTimeDetail) (primitive.ObjectID, error) {
+func (t *StaffRepository) AddTeachTime(staffId_ primitive.ObjectID, details_ *model.TeachTimeDetail) (string, error) {
 	ctx, cancel := util.CreateTimeoutContext()
 	defer cancel()
 
+	// Set default value
+	year, month, _ := time.Now().Date()
+	details_.UUID = uuid.NewString()
+	details_.Months = uint8(month)
+	details_.Years = uint16(year)
+
 	// Push array
-	update := bson.M{"$push": *details_}
-	result, err := t.collection.UpdateByID(ctx, staffId_, update, options.Update())
+	update := bson.M{"$push": bson.M{"details": *details_}}
+	_, err := t.collection.UpdateByID(ctx, staffId_, update, options.Update())
 	if err != nil {
-		return primitive.NilObjectID, err
+		return "", err
 	}
 
-	return result.UpsertedID.(primitive.ObjectID), nil
+	return details_.UUID, nil
+}
+
+func (t *StaffRepository) RemoveTeachTime(staffId_ primitive.ObjectID, uuid_ string) error {
+	ctx, cancel := util.CreateTimeoutContext()
+	defer cancel()
+
+	update := bson.M{"$pull": bson.M{"details": bson.M{"uuid": uuid_}}}
+
+	return util.GetError(t.collection.UpdateByID(ctx, staffId_, update, options.Update()))
 }
