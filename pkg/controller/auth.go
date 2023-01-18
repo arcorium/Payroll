@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
-	"log"
 )
 
 func (a *API) Login(c *fiber.Ctx) error {
@@ -141,16 +140,6 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 	// Response
 	response := model.ResponseToken{AccessToken: accessToken}
 	return SendSuccessResponse(c, fasthttp.StatusOK, response)
-}
-
-func (a *API) ImportDataFromExcel(c *fiber.Ctx) error {
-
-	log.Println(string(c.Body()))
-	return SendSuccessResponse(c, fasthttp.StatusAccepted, nil)
-}
-
-func (a *API) ExportDataToExcel(c *fiber.Ctx) error {
-	return SendSuccessResponse(c, fasthttp.StatusOK, nil)
 }
 
 // validateAuthorization middleware to check claims in jwt on key "authorized" and

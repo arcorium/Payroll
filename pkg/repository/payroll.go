@@ -24,7 +24,7 @@ func NewPayrollRepository(db_ *dbutil.Database, collection_ string) PayrollRepos
 }
 
 func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, years_ uint16) error {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	file, err := excelize.OpenReader(reader_, excelize.Options{})
@@ -53,25 +53,65 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, years_ uint16) er
 	return nil
 }
 
-func (p *PayrollRepository) GetPayrollByStaffId(staffId_ primitive.ObjectID) (model.Payroll, error) {
+func (p *PayrollRepository) GetPayrollByStaffId(staffId_ primitive.ObjectID) ([]model.Payroll, error) {
 	return p.getPayrollByFilter(bson.M{"staff_id": staffId_})
 }
 
-func (p *PayrollRepository) GetPayrolls() ([]model.Payroll, error) {
-	return nil, nil
-}
-
-func (p *PayrollRepository) getPayrollByFilter(filter_ any) (model.Payroll, error) {
-	ctx, cancel := util.CreateTimeoutContext()
-	defer cancel()
-
-	payroll := model.Payroll{}
-
-	res := p.collection.FindOne(ctx, filter_, options.FindOne())
-	if res == nil {
-		return payroll, errors.New("there is no payroll data")
+func (p *PayrollRepository) GetOnePayrollByStaffId(staffId_ primitive.ObjectID, months_ uint8, years_ uint16) (model.Payroll, error) {
+	payrolls, err := p.getPayrollByFilter(bson.M{"staff_id": staffId_, "months": months_, "years": years_})
+	if err != nil {
+		return model.Payroll{}, err
 	}
 
-	err := res.Decode(&payroll)
-	return payroll, err
+	return payrolls[0], nil
+}
+
+func (p *PayrollRepository) GetPayrolls(month_ uint8, years_ uint16) ([]model.Payroll, error) {
+	return p.getPayrollByFilter(bson.M{"months": month_, "years": years_})
+}
+
+func (p *PayrollRepository) EditAndFindById(staffId_ primitive.ObjectID, months_ uint8, years_ uint16, payroll_ *model.Payroll) (model.Payroll, error) {
+	err := p.EditPayroll(staffId_, months_, years_, payroll_)
+	if err != nil {
+		return model.Payroll{}, err
+	}
+
+	return p.GetOnePayrollByStaffId(staffId_, months_, years_)
+}
+
+func (p *PayrollRepository) EditPayroll(staffId_ primitive.ObjectID, months_ uint8, years_ uint16, payroll_ *model.Payroll) error {
+	ctx, cancel := util.CreateShortTimeoutContext()
+	defer cancel()
+
+	object, err := util.GenerateBsonObject(*payroll_)
+	if err != nil {
+		return err
+	}
+
+	filter := bson.M{"staff_id": staffId_, "months": months_, "years": years_}
+	query := bson.M{"$set": object}
+	return util.GetError(p.collection.UpdateOne(ctx, filter, query, options.Update()))
+}
+
+func (p *PayrollRepository) getPayrollByFilter(filter_ any) ([]model.Payroll, error) {
+	var payrolls []model.Payroll
+	ctx, cancel := util.CreateShortTimeoutContext()
+	defer cancel()
+
+	cursor, err := p.collection.Find(ctx, filter_, options.Find())
+	if err != nil {
+		return payrolls, errors.New("there is no payroll data")
+	}
+	defer cursor.Close(ctx)
+
+	for cursor.Next(ctx) {
+		payroll := model.Payroll{}
+		err = cursor.Decode(&payroll)
+		if err != nil {
+			return payrolls, err
+		}
+		payrolls = append(payrolls, payroll)
+	}
+
+	return payrolls, nil
 }

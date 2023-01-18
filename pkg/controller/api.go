@@ -22,14 +22,21 @@ type API struct {
 	// Repository
 	userRepo     *repository.UserRepository
 	staffRepo    *repository.StaffRepository
+	payrollRepo  *repository.PayrollRepository
 	positionRepo *repository.PositionRepository
 	tokenRepo    *repository.TokenRepository
 }
 
 func NewAPI(app_ *fiber.App, config_ *dbutil.DBConfig, db_ *dbutil.Database, userRepo_ *repository.UserRepository,
-	teacherRepo_ *repository.StaffRepository, positionRepo_ *repository.PositionRepository,
+	staffRepo_ *repository.StaffRepository, payrollRepo_ *repository.PayrollRepository, positionRepo_ *repository.PositionRepository,
 	tokenRepo_ *repository.TokenRepository) API {
-	return API{app: app_, db: db_, config: config_, userRepo: userRepo_, staffRepo: teacherRepo_, positionRepo: positionRepo_, tokenRepo: tokenRepo_}
+	return API{app: app_, db: db_, config: config_,
+		userRepo:     userRepo_,
+		staffRepo:    staffRepo_,
+		payrollRepo:  payrollRepo_,
+		positionRepo: positionRepo_,
+		tokenRepo:    tokenRepo_,
+	}
 }
 
 func (a *API) HandleAPI() {
@@ -42,7 +49,6 @@ func (a *API) HandleAPI() {
 
 	// api/v1
 	v1 := a.app.Group("/api/v1")
-	v1.Post("/test/", a.ImportDataFromExcel)
 
 	// api/v1/user
 	userApi := v1.Group("/users")
@@ -86,20 +92,30 @@ func (a *API) HandleAPI() {
 	updateStaffApi.Post("/teach", a.InsertTeachTime)
 	updateStaffApi.Delete("/teach/:uuid", a.RemoveTeachTime)
 
-	// api/v1/teacher/pos/
-	positionApi := staffApi.Group("/positions")
-	// Create
-	positionApi.Post("/", a.RegisterPosition)
-	// Delete
-	positionApi.Delete("/id/:id:", a.RemovePositionById)
-	positionApi.Delete("/name/:name:", a.RemovePositionByName)
+	payrollApi := v1.Group("/payrolls")
 	// Get
-	positionApi.Get("/id/:id:", a.GetPositionById)
-	positionApi.Get("/name/:name:", a.GetPositionByName)
-	positionApi.Get("/", a.GetPositions)
+	payrollApi.Get("/", a.GetPayrolls)
+	payrollApi.Get("/:id", a.GetPayrollById)
 	// Edit
-	positionApi.Put("/id/:id:", a.UpdatePositionById)
-	positionApi.Put("/name/:name:", a.UpdatePositionByName)
+	payrollApi.Put("/:id", a.UpdatePayroll)
+	// Import
+	payrollApi.Post("/imports", a.ImportPayrollFromExcel)
+	payrollApi.Post("/copy", a.CopyPayroll)
+
+	// api/v1/teacher/pos/
+	//positionApi := staffApi.Group("/positions")
+	//// Create
+	//positionApi.Post("/", a.RegisterPosition)
+	//// Delete
+	//positionApi.Delete("/id/:id:", a.RemovePositionById)
+	//positionApi.Delete("/name/:name:", a.RemovePositionByName)
+	//// Get
+	//positionApi.Get("/id/:id:", a.GetPositionById)
+	//positionApi.Get("/name/:name:", a.GetPositionByName)
+	//positionApi.Get("/", a.GetPositions)
+	//// Edit
+	//positionApi.Put("/id/:id:", a.UpdatePositionById)
+	//positionApi.Put("/name/:name:", a.UpdatePositionByName)
 }
 
 func (a *API) Start(address_ string) error {

@@ -20,7 +20,7 @@ func NewConfigRepository(db_ *dbutil.Database, collectionName_ string) ConfigRep
 }
 
 func (c *ConfigRepository) ReplaceConfig(config_ *model.Config) error {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	id, err := primitive.ObjectIDFromHex("63bcfde6176616e32e0e2c68")

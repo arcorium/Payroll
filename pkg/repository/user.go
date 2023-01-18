@@ -22,7 +22,7 @@ func NewUserRepository(db_ *dbutil.Database, collectionName_ string) UserReposit
 }
 
 func (u *UserRepository) AddUser(user_ *model.User) (primitive.ObjectID, error) {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Give Default Value
@@ -67,7 +67,7 @@ func (u *UserRepository) GetUserById(id_ primitive.ObjectID) (model.User, error)
 func (u *UserRepository) GetUsers() ([]model.User, error) {
 	// Create context
 	var users []model.User
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Find data with no filter
@@ -75,6 +75,7 @@ func (u *UserRepository) GetUsers() ([]model.User, error) {
 	if err != nil {
 		return users, err
 	}
+	defer cursor.Close(ctx)
 
 	// Iterate cursor
 	for cursor.Next(ctx) {
@@ -109,7 +110,7 @@ func (u *UserRepository) ValidateUser(username_ string, password_ string) (model
 }
 
 func (u *UserRepository) UpdateLoggedIn(userId_ primitive.ObjectID, condition_ bool) error {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Update logged in condition
@@ -132,7 +133,7 @@ func (u *UserRepository) IsLoggedIn(userId_ primitive.ObjectID) error {
 func (u *UserRepository) getUserByFilter(filter_ any) (model.User, error) {
 	user := model.User{}
 	// Create Timeout context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Get
@@ -149,7 +150,7 @@ func (u *UserRepository) getUserByFilter(filter_ any) (model.User, error) {
 func (u *UserRepository) removeUserByFilter(filter_ any) (model.User, error) {
 	user := model.User{}
 	// Create Context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Find and Delete
@@ -165,7 +166,7 @@ func (u *UserRepository) removeUserByFilter(filter_ any) (model.User, error) {
 
 func (u *UserRepository) editUserByFilter(filter_ any, user_ *model.User) error {
 	// Create context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Update modified_at field

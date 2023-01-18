@@ -21,7 +21,7 @@ func NewPositionRepository(db_ *dbutil.Database, collectionName_ string) Positio
 }
 
 func (p *PositionRepository) AddPosition(position_ model.Position) (model.ResponseID, error) {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	result, err := p.collection.InsertOne(ctx, position_, options.InsertOne())
@@ -51,7 +51,7 @@ func (p *PositionRepository) GetPositionById(id_ primitive.ObjectID) (model.Posi
 func (p *PositionRepository) GetPositions() ([]model.Position, error) {
 	// Create context
 	var positions []model.Position
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Find data with no filter
@@ -83,7 +83,7 @@ func (p *PositionRepository) EditPositionById(id_ primitive.ObjectID, newName_ s
 func (p *PositionRepository) getPositionByFilter(filter_ any) (model.Position, error) {
 	position := model.Position{}
 	// Create Timeout context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Get
@@ -100,7 +100,7 @@ func (p *PositionRepository) getPositionByFilter(filter_ any) (model.Position, e
 func (p *PositionRepository) removePositionByFilter(filter_ any) (model.Position, error) {
 	position := model.Position{}
 	// Create Context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Find and Delete
@@ -116,7 +116,7 @@ func (p *PositionRepository) removePositionByFilter(filter_ any) (model.Position
 
 func (p *PositionRepository) editPositionByFilter(filter_ any, newName_ string) (model.ResponseID, error) {
 	// Create context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Replace

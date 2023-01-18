@@ -13,7 +13,7 @@ type Database struct {
 }
 
 func (d *Database) Disconnect() error {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	return d.client.Disconnect(ctx)
@@ -21,7 +21,7 @@ func (d *Database) Disconnect() error {
 
 func Connect(config_ *DBConfig) (Database, error) {
 	db := Database{Config: config_}
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(config_.DatabaseURI))

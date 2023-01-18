@@ -10,7 +10,8 @@ import (
 
 // ---------------- START CONSTANT
 const (
-	CONTEXT_TIMEOUT            = time.Second * 10
+	CONTEXT_SHORT_TIMEOUT      = time.Second * 10
+	CONTEXT_LONG_TIMEOUT       = time.Second * 30
 	JWT_REFRESH_TIMEOUT        = time.Hour * 24
 	JWT_ACCESS_TIMEOUT         = time.Minute * 15
 	JWT_COOKIE_REFRESH_TIMEOUT = JWT_REFRESH_TIMEOUT
@@ -25,8 +26,12 @@ const (
 
 // ---------------- END CONSTANT
 
-func CreateTimeoutContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), CONTEXT_TIMEOUT)
+func CreateShortTimeoutContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), CONTEXT_SHORT_TIMEOUT)
+}
+
+func CreateLongTimeoutContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), CONTEXT_LONG_TIMEOUT)
 }
 
 func Hash(str_ string) (string, error) {

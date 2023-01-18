@@ -1,6 +1,8 @@
 package model
 
-import "go.mongodb.org/mongo-driver/bson/primitive"
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
 
 type Payroll struct {
 	Id         primitive.ObjectID `json:"id" bson:"_id"`
@@ -8,8 +10,9 @@ type Payroll struct {
 	StaffName  string             `json:"nama_staff,omitempty" bson:"nama_staff,omitempty"`
 	Salary     Salary             `json:"gaji" bson:"gaji"`
 	SalaryCuts SalaryCuts         `json:"potongan_gaji" bson:"potongan_gaji"`
-	Month      uint8              `json:"bulan" bson:"bulan"`
-	Years      uint16             `json:"tahun" bson:"tahun"`
+
+	Month uint8  `json:"months" bson:"months"`
+	Years uint16 `json:"years" bson:"years"`
 }
 
 type Salary struct {
@@ -36,4 +39,17 @@ type HonorarySalary struct {
 type HonoraryDetails struct {
 	Hours uint8  `json:"jam" bson:"jam"`
 	Total uint64 `json:"jumlah" bson:"jumlah"`
+}
+
+type Total struct {
+	Total      uint32 `json:"total"`
+	Penerimaan uint32 `json:"penerimaan"`
+	Slip       uint32 `json:"slip"`
+}
+
+type PayrollRequest struct {
+	Months uint8  `json:"months"`
+	Years  uint16 `json:"years"`
+
+	Data any `json:"data,omitempty"`
 }

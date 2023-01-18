@@ -21,7 +21,7 @@ func NewTokenRepository(db_ *dbutil.Database, collectionName_ string) TokenRepos
 }
 
 func (t *TokenRepository) AddToken(token_ *model.Token) (model.ResponseID, error) {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	result, err := t.collection.InsertOne(ctx, *token_, options.InsertOne())
@@ -51,7 +51,7 @@ func (t *TokenRepository) RemoveTokenByUserId(userId_ primitive.ObjectID) (model
 
 func (t *TokenRepository) UpdateToken(token_ string, newToken_ string) error {
 	// Create timeout context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Update query
@@ -80,7 +80,7 @@ func (t *TokenRepository) getTokenByFilter(filter_ any) (model.Token, error) {
 	token := model.Token{}
 
 	// Create timeout context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Querying
@@ -95,7 +95,7 @@ func (t *TokenRepository) removeTokenByFilter(filter_ any) (model.Token, error) 
 	token := model.Token{}
 
 	// Create timeout context
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// Delete and return deleted one
@@ -110,7 +110,7 @@ func (t *TokenRepository) removeTokenByFilter(filter_ any) (model.Token, error) 
 }
 
 func (t *TokenRepository) upsertTokenByFilter(filter_ any, update_ any) (model.Token, error) {
-	ctx, cancel := util.CreateTimeoutContext()
+	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
 	// When filter is not found, it will insert new data with filter field and field after $set

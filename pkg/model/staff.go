@@ -10,6 +10,7 @@ type Staff struct {
 	Position         InstitutePosition  `json:"jabatan" bson:"jabatan"`
 	PersonalData     Personal           `json:"data_pribadi" bson:"data_pribadi"`
 	Education        Education          `json:"pendidikan" bson:"pendidikan"`
+	Savings          []Saving           `json:"tabungan" bson:"tabungan"`
 	TeachTimeDetails []TeachTimeDetail  `json:"details,omitempty" bson:"details"`
 }
 
@@ -53,4 +54,12 @@ type TeachTimeDetail struct {
 
 	Months uint8  `json:"month,omitempty" bson:"month"`
 	Years  uint16 `json:"years,omitempty" bson:"years"`
+}
+
+type Saving struct {
+	UUID  string `json:"uuid,omitempty" bson:"uuid"`
+	Total uint32 `json:"total" bson:"total"`
+
+	Months uint8  `json:"months" bson:"months"`
+	Years  uint16 `json:"years" bson:"years"`
 }
