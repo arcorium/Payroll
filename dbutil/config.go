@@ -1,7 +1,7 @@
 package dbutil
 
 import (
-	"Penggajian/pkg/util"
+	"Penggajian/util"
 	"fmt"
 	"os"
 )

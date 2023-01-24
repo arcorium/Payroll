@@ -18,7 +18,6 @@ type InstitutePosition struct {
 	Position        string          `json:"nama_jabatan" bson:"nama_jabatan"`
 	Institute       string          `json:"instansi_induk" bson:"instansi_induk"`
 	HomeRoomTeacher HomeRoomTeacher `json:"wali_kelas" bson:"wali_kelas"`
-	TeachTime       uint8           `json:"jam_ajar" bson:"jam_ajar"`
 }
 
 type HomeRoomTeacher struct {
@@ -58,7 +57,7 @@ type TeachTimeDetail struct {
 
 type Saving struct {
 	UUID  string `json:"uuid,omitempty" bson:"uuid"`
-	Total uint32 `json:"total" bson:"total"`
+	Total uint64 `json:"total" bson:"total"`
 
 	Months uint8  `json:"months" bson:"months"`
 	Years  uint16 `json:"years" bson:"years"`

@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"Penggajian/pkg/model"
+	"Penggajian/model"
 	"errors"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"

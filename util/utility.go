@@ -5,6 +5,7 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"time"
 )
 
@@ -48,8 +49,20 @@ func GetError[T any](_ T, err error) error {
 	return err
 }
 
+func IsError(err_ error) bool {
+	if err_ != nil {
+		log.Println(err_)
+		return true
+	}
+	return false
+}
+
+func NotUsed[T any](data_ T) {
+
+}
+
 func IsEmpty(data_ string) bool {
-	return len(data_) < 1
+	return len(data_) < 1 || data_ == "-"
 }
 
 func GenerateRefreshToken(claims_ jwt.Claims, secretKey_ []byte) (string, error) {

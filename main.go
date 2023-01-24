@@ -1,9 +1,9 @@
 package main
 
 import (
-	"Penggajian/pkg/controller"
-	"Penggajian/pkg/dbutil"
-	"Penggajian/pkg/repository"
+	"Penggajian/controller"
+	"Penggajian/dbutil"
+	"Penggajian/repository"
 	"github.com/gofiber/fiber/v2"
 	"log"
 )

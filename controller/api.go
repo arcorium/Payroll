@@ -1,9 +1,9 @@
 package controller
 
 import (
-	"Penggajian/pkg/dbutil"
-	"Penggajian/pkg/repository"
-	"Penggajian/pkg/util"
+	"Penggajian/dbutil"
+	"Penggajian/repository"
+	"Penggajian/util"
 	"errors"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
@@ -95,9 +95,11 @@ func (a *API) HandleAPI() {
 	payrollApi := v1.Group("/payrolls")
 	// Get
 	payrollApi.Get("/", a.GetPayrolls)
-	payrollApi.Get("/:id", a.GetPayrollById)
+	payrollApi.Get("/:id", a.GetPayrollBySerialNumber)
 	// Edit
-	payrollApi.Put("/:id", a.UpdatePayroll)
+	//payrollApi.Put("/:id", a.UpdatePayrollById)
+	// Delete
+	payrollApi.Delete("/", a.ClearPayroll)
 	// Import
 	payrollApi.Post("/imports", a.ImportPayrollFromExcel)
 	payrollApi.Post("/copy", a.CopyPayroll)

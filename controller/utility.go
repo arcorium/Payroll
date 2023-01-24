@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"Penggajian/pkg/model"
-	"Penggajian/pkg/util"
+	"Penggajian/model"
+	"Penggajian/util"
 	"github.com/gofiber/fiber/v2"
 	"time"
 )

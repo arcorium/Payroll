@@ -1,7 +1,7 @@
 package model
 
 import (
-	"Penggajian/pkg/util"
+	"Penggajian/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
 )

@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"Penggajian/pkg/dbutil"
-	"Penggajian/pkg/model"
-	"Penggajian/pkg/util"
+	"Penggajian/dbutil"
+	"Penggajian/model"
+	"Penggajian/util"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"

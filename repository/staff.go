@@ -1,9 +1,9 @@
 package repository
 
 import (
-	"Penggajian/pkg/dbutil"
-	"Penggajian/pkg/model"
-	"Penggajian/pkg/util"
+	"Penggajian/dbutil"
+	"Penggajian/model"
+	"Penggajian/util"
 	"errors"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
@@ -22,15 +22,19 @@ func NewStaffRepository(db_ *dbutil.Database, collectionName_ string) StaffRepos
 	return StaffRepository{db: db_, collection: db_.DB.Collection(collectionName_, options.Collection())}
 }
 
-func (t *StaffRepository) AddStaff(teacher_ *model.Staff) (primitive.ObjectID, error) {
+func (t *StaffRepository) AddStaff(staff_ *model.Staff) (primitive.ObjectID, error) {
 	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
-	if len(teacher_.TeachTimeDetails) < 1 {
-		teacher_.TeachTimeDetails = []model.TeachTimeDetail{}
+	if len(staff_.TeachTimeDetails) < 1 {
+		staff_.TeachTimeDetails = []model.TeachTimeDetail{}
 	}
 
-	result, err := t.collection.InsertOne(ctx, *teacher_, options.InsertOne())
+	if len(staff_.Savings) < 1 {
+		staff_.Savings = []model.Saving{}
+	}
+
+	result, err := t.collection.InsertOne(ctx, *staff_, options.InsertOne())
 	if err != nil {
 		return primitive.NilObjectID, err
 	}
@@ -191,29 +195,29 @@ func (t *StaffRepository) ClearTeachTime(staffId_ primitive.ObjectID, months_ ui
 	return util.GetError(t.collection.UpdateOne(ctx, filter, query, options.Update()))
 }
 
-func (t *StaffRepository) AddSaving(staffId_ primitive.ObjectID, details_ *model.Saving) (string, error) {
+func (t *StaffRepository) AddSavingBySerialNumber(serialNumber_ uint16, details_ *model.Saving) (string, error) {
 	// Set default value
+	details_.UUID = uuid.NewString()
 	if details_.Months < 1 || details_.Years < 1 {
 		year, month, _ := time.Now().Date()
-		details_.UUID = uuid.NewString()
 		details_.Months = uint8(month)
 		details_.Years = uint16(year)
 	}
 
-	err := t.pushArray(bson.M{"_id": staffId_}, bson.M{"tabungan": *details_})
+	err := t.pushArray(bson.M{"no_urut": serialNumber_}, bson.M{"tabungan": *details_})
 	return details_.UUID, err
 }
 
-func (t *StaffRepository) RemoveSaving(staffId_ primitive.ObjectID, uuid_ string) error {
+func (t *StaffRepository) RemoveStaffSavingById(staffId_ primitive.ObjectID, uuid_ string) error {
 	ctx, cancel := util.CreateShortTimeoutContext()
 	defer cancel()
 
-	update := bson.M{"$pull": bson.M{"details": bson.M{"uuid": uuid_}}}
+	update := bson.M{"$pull": bson.M{"tabungan": bson.M{"uuid": uuid_}}}
 
 	return util.GetError(t.collection.UpdateByID(ctx, staffId_, update, options.Update()))
 }
 
-func (t *StaffRepository) ClearSavings(staffId_ primitive.ObjectID, years_ uint16) error {
+func (t *StaffRepository) ClearStaffSavingsByYears(staffId_ primitive.ObjectID, years_ uint16) error {
 	ctx, cancel := util.CreateLongTimeoutContext()
 	defer cancel()
 
@@ -221,6 +225,16 @@ func (t *StaffRepository) ClearSavings(staffId_ primitive.ObjectID, years_ uint1
 	query := bson.M{"$pull": bson.M{"tabungan": bson.M{"years": years_}}}
 
 	return util.GetError(t.collection.UpdateOne(ctx, filter, query, options.Update()))
+}
+
+func (t *StaffRepository) ClearSavings(months_ uint8, years_ uint16) error {
+	ctx, cancel := util.CreateLongTimeoutContext()
+	defer cancel()
+
+	filter := bson.M{}
+	query := bson.M{"$pull": bson.M{"tabungan": bson.M{"months": months_, "years": years_}}}
+
+	return util.GetError(t.collection.UpdateMany(ctx, filter, query, options.Update()))
 }
 
 func (t *StaffRepository) pushArray(filter_ any, query_ any) error {

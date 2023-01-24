@@ -1,7 +1,7 @@
 package dbutil
 
 import (
-	"Penggajian/pkg/util"
+	"Penggajian/util"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
