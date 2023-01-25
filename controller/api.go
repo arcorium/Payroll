@@ -83,11 +83,11 @@ func (a *API) HandleAPI() {
 	// Create
 	staffApi.Post("/", a.RegisterStaff)
 	// Get
-	staffApi.Get("/:id", a.GetStaffById)
+	staffApi.Get("/id/:id", a.GetStaffById)
 	staffApi.Get("/", a.GetStaffs)
-	staffApi.Put("/", a.UpdateStaffById)
 	// Edit
-	updateStaffApi := staffApi.Group("/:id")
+	staffApi.Put("/", a.UpdateStaffById)
+	updateStaffApi := staffApi.Group("/id/:id")
 	// Teach Time
 	updateStaffApi.Post("/teach", a.InsertTeachTime)
 	updateStaffApi.Delete("/teach/:uuid", a.RemoveTeachTime)

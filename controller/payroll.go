@@ -98,6 +98,11 @@ func (a *API) CopyPayroll(c *fiber.Ctx) error {
 		years -= 1
 	}
 
+	// Insert into new data
+	if err := a.payrollRepo.IsPayrollsEmpty(payrollReq.Months, payrollReq.Years); util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusConflict, "payroll for current month and years is already there")
+	}
+
 	// Get payroll data without calculated total
 	payrolls, err := a.payrollRepo.GetPayrolls(months, years, false)
 	if err != nil {
@@ -108,7 +113,7 @@ func (a *API) CopyPayroll(c *fiber.Ctx) error {
 		return SendErrorResponse(c, fasthttp.StatusNotFound, "no payroll data found in the last month")
 	}
 
-	// Increment months and convert into []interface{}
+	// Increment months, convert into []interface{}, and insert savings
 	insertPayrolls := make([]any, len(payrolls))
 	for i := 0; i < len(payrolls); i++ {
 		// Update month and years based on req (basically just incrementing month by one)
@@ -118,12 +123,18 @@ func (a *API) CopyPayroll(c *fiber.Ctx) error {
 		// Delete id
 		payrolls[i].Id = primitive.NilObjectID
 
-		insertPayrolls[i] = payrolls[i]
-	}
+		// Insert array in staff savings
+		saving := model.Saving{
+			Total:  payrolls[i].Save,
+			Months: payrolls[i].Month,
+			Years:  payrolls[i].Years,
+		}
+		if util.IsError(
+			util.GetError(a.staffRepo.AddSavingBySerialNumber(payrolls[i].StaffSerialNumber, &saving))) {
+			return SendErrorResponse(c, fasthttp.StatusInternalServerError, "cannot update saving data")
+		}
 
-	// Insert into new data
-	if err := a.payrollRepo.IsPayrollsEmpty(payrollReq.Months, payrollReq.Years); util.IsError(err) {
-		return SendErrorResponse(c, fasthttp.StatusNotModified, err.Error())
+		insertPayrolls[i] = payrolls[i]
 	}
 
 	size, err := a.payrollRepo.AddPayrollsInBulk(insertPayrolls)
