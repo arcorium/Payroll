@@ -50,6 +50,17 @@ func (a *API) HandleAPI() {
 	// api/v1
 	v1 := a.app.Group("/api/v1")
 
+	// For testing setting cookie
+	v1.Get("/set-cookie", func(ctx *fiber.Ctx) error {
+		cookie := new(fiber.Cookie)
+		cookie.Expires = time.Now().Add(2 * time.Hour)
+		cookie.Name = "test"
+		cookie.Value = "it is test cookie"
+
+		ctx.Cookie(cookie)
+
+		return nil
+	})
 	// api/v1/user
 	userApi := v1.Group("/users")
 	// Core
@@ -65,7 +76,7 @@ func (a *API) HandleAPI() {
 	authUserApi := userApi.Group("")
 	authUserApi.Post("/logout", a.Logout)
 	// Create
-	authUserApi.Use(a.superOnly())
+	//authUserApi.Use(a.superOnly())
 	authUserApi.Post("/", a.RegisterUser)
 	// Delete
 	authUserApi.Delete("/id/:id", a.RemoveUserById)
