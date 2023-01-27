@@ -121,6 +121,15 @@ func (t *StaffRepository) EditStaffByName(name_ string, teacher_ *model.Staff) (
 	return t.editStaffByFilter(bson.M{"name": name_}, teacher_)
 }
 
+func (t *StaffRepository) RemoveStaffById(staffId_ primitive.ObjectID) error {
+	// Create Timeout context
+	ctx, cancel := util.CreateShortTimeoutContext()
+	defer cancel()
+
+	_, err := t.collection.DeleteOne(ctx, bson.M{"_id": staffId_}, options.Delete())
+	return err
+}
+
 func (t *StaffRepository) getStaffByFilter(filter_ any) (model.Staff, error) {
 	teacher := model.Staff{}
 	// Create Timeout context
@@ -205,6 +214,19 @@ func (t *StaffRepository) ClearTeachTime(staffId_ primitive.ObjectID, months_ ui
 	return util.GetError(t.collection.UpdateOne(ctx, filter, query, options.Update()))
 }
 
+func (t *StaffRepository) AddSavingByStaffId(staffId_ primitive.ObjectID, details_ *model.Saving) (string, error) {
+	// Set default value
+	details_.UUID = uuid.NewString()
+	if details_.Months < 1 || details_.Years < 1 {
+		year, month, _ := time.Now().Date()
+		details_.Months = uint8(month)
+		details_.Years = uint16(year)
+	}
+
+	err := t.pushArray(bson.M{"_id": staffId_}, bson.M{"tabungan": *details_})
+	return details_.UUID, err
+}
+
 func (t *StaffRepository) AddSavingBySerialNumber(serialNumber_ uint16, details_ *model.Saving) (string, error) {
 	// Set default value
 	details_.UUID = uuid.NewString()
@@ -227,6 +249,15 @@ func (t *StaffRepository) RemoveStaffSavingById(staffId_ primitive.ObjectID, uui
 	return util.GetError(t.collection.UpdateByID(ctx, staffId_, update, options.Update()))
 }
 
+func (t *StaffRepository) RemoveStaffSavingBySerialNumber(serialNumber_ uint16, uuid_ string) error {
+	ctx, cancel := util.CreateShortTimeoutContext()
+	defer cancel()
+
+	update := bson.M{"$pull": bson.M{"tabungan": bson.M{"uuid": uuid_}}}
+
+	return util.GetError(t.collection.UpdateOne(ctx, bson.M{"no_urut": serialNumber_}, update, options.Update()))
+}
+
 func (t *StaffRepository) ClearStaffSavingsByYears(staffId_ primitive.ObjectID, years_ uint16) error {
 	ctx, cancel := util.CreateLongTimeoutContext()
 	defer cancel()
@@ -245,6 +276,46 @@ func (t *StaffRepository) ClearSavings(months_ uint8, years_ uint16) error {
 	query := bson.M{"$pull": bson.M{"tabungan": bson.M{"months": months_, "years": years_}}}
 
 	return util.GetError(t.collection.UpdateMany(ctx, filter, query, options.Update()))
+}
+
+func (t *StaffRepository) EditTeachTime(staffId_ primitive.ObjectID, uuid_ string, details_ *model.TeachTimeDetail) (model.TeachTimeDetail, error) {
+	ctx, cancel := util.CreateShortTimeoutContext()
+	defer cancel()
+
+	details := model.TeachTimeDetail{}
+
+	object, err := util.GenerateBsonObject(*details_)
+	if err != nil {
+		return model.TeachTimeDetail{}, err
+	}
+
+	filter := bson.M{"_id": staffId_, "details": bson.M{"$elemMatch": bson.M{"uuid": uuid_}}}
+	query := bson.M{"$set": bson.M{"details.$": object}}
+
+	result := t.collection.FindOneAndUpdate(ctx, filter, query, options.FindOneAndUpdate().SetReturnDocument(options.After))
+	err = result.Decode(&details)
+
+	return details, err
+}
+
+func (t *StaffRepository) EditStaffSavingById(staffId_ primitive.ObjectID, uuid_ string, saving_ *model.Saving) (model.Saving, error) {
+	ctx, cancel := util.CreateShortTimeoutContext()
+	defer cancel()
+
+	saving := model.Saving{}
+
+	object, err := util.GenerateBsonObject(*saving_)
+	if err != nil {
+		return model.Saving{}, err
+	}
+
+	filter := bson.M{"_id": staffId_, "tabungan": bson.M{"$elemMatch": bson.M{"uuid": uuid_}}}
+	query := bson.M{"$set": bson.M{"tabungan.$": object}}
+
+	result := t.collection.FindOneAndUpdate(ctx, filter, query, options.FindOneAndUpdate().SetReturnDocument(options.After))
+	err = result.Decode(&saving)
+
+	return saving, err
 }
 
 func (t *StaffRepository) pushArray(filter_ any, query_ any) error {

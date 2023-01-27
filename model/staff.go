@@ -59,6 +59,6 @@ type Saving struct {
 	UUID  string `json:"uuid,omitempty" bson:"uuid"`
 	Total uint64 `json:"total" bson:"total"`
 
-	Months uint8  `json:"months" bson:"months"`
-	Years  uint16 `json:"years" bson:"years"`
+	Months uint8  `json:"months,omitempty" bson:"months"`
+	Years  uint16 `json:"years,omitempty" bson:"years"`
 }

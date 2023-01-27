@@ -76,7 +76,7 @@ func (a *API) HandleAPI() {
 	authUserApi = userApi.Group("")
 	authUserApi.Post("/logout", a.Logout)
 	// Create
-	//authUserApi.Use(a.superOnly())
+	authUserApi.Use(a.superOnly())
 	authUserApi.Post("/", a.RegisterUser)
 	// Delete
 	authUserApi.Delete("/id/:id", a.RemoveUserById)
@@ -98,10 +98,18 @@ func (a *API) HandleAPI() {
 	staffApi.Get("/", a.GetStaffs)
 	// Edit
 	staffApi.Put("/", a.UpdateStaffById)
+	// Delete
+	staffApi.Delete("/id/:id", a.RemoveStaffById)
+
 	updateStaffApi := staffApi.Group("/id/:id")
 	// Teach Time
 	updateStaffApi.Post("/teach", a.InsertTeachTime)
+	//updateStaffApi.Put("/teach/:uuid", a.UpdateTeachTime)
 	updateStaffApi.Delete("/teach/:uuid", a.RemoveTeachTime)
+	// Saving
+	updateStaffApi.Post("/savings", a.InsertSaving)
+	//updateStaffApi.Put("/savings/:uuid", a.UpdateSaving)
+	updateStaffApi.Delete("/savings/:uuid", a.RemoveSaving)
 
 	payrollApi := v1.Group("/payrolls")
 	// Get

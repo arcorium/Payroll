@@ -81,52 +81,22 @@ func (a *API) GetStaffs(c *fiber.Ctx) error {
 	return SendSuccessResponse(c, fasthttp.StatusOK, staffs)
 }
 
-func (a *API) InsertTeachTime(c *fiber.Ctx) error {
+func (a *API) RemoveStaffById(c *fiber.Ctx) error {
+	// Parameter check
 	id := c.Params("id")
 	if util.IsEmpty(id) {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
 	}
 
-	// Parse id
-	staffId, err := primitive.ObjectIDFromHex(id)
+	// Convert into ObjectID
+	objectId, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_MALFORM)
+		return err
 	}
 
-	// Parse body
-	teachDetails := model.TeachTimeDetail{}
-	if c.BodyParser(&teachDetails) != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
-	}
-
-	// Insert data
-	_, err = a.staffRepo.AddTeachTime(staffId, &teachDetails)
+	err = a.staffRepo.RemoveStaffById(objectId)
 	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to add teach time")
-	}
-
-	return SendSuccessResponse(c, fasthttp.StatusCreated, teachDetails)
-}
-
-func (a *API) RemoveTeachTime(c *fiber.Ctx) error {
-	id := c.Params("id")
-	if util.IsEmpty(id) {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
-	}
-	uuid := c.Params("uuid")
-	if util.IsEmpty(uuid) {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
-	}
-
-	// Parse id
-	staffId, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_MALFORM)
-	}
-
-	err = a.staffRepo.RemoveTeachTime(staffId, uuid)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to remove teach time")
+		return SendErrorResponse(c, fasthttp.StatusInternalServerError, err.Error())
 	}
 
 	return SendSuccessResponse(c, fasthttp.StatusOK, nil)
