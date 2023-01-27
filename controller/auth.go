@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func (a *API) Login(c *fiber.Ctx) error {
@@ -23,12 +24,13 @@ func (a *API) Login(c *fiber.Ctx) error {
 
 	// Validate user with the username and password
 	user, err = a.userRepo.ValidateUser(user.Username, user.Password)
-	if err != nil {
+	if util.IsError(err) {
 		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "user not found")
 	}
 
 	// JWT
 	claims := jwt.MapClaims{}
+	claims["id"] = user.Id.Hex()
 
 	refreshToken, err := util.GenerateRefreshToken(claims, []byte(a.config.SecretKey))
 	if err != nil {
@@ -36,8 +38,8 @@ func (a *API) Login(c *fiber.Ctx) error {
 	}
 	// claims
 	claims = jwt.MapClaims{
-		//"id":         id,
-		"id":         user.Id,
+		"username":   user.Username,
+		"id":         user.Id.Hex(),
 		"authorized": true,
 		"admin":      user.Type == model.Admin,
 	}
@@ -48,9 +50,9 @@ func (a *API) Login(c *fiber.Ctx) error {
 	}
 
 	// Load token to database
-	token := model.Token{Token: refreshToken, UserId: user.Id}
+	//token := model.Token{Token: refreshToken, UserId: user.Id}
 	// either update or inserting data
-	token, err = a.tokenRepo.UpsertTokenByUserId(user.Id, &token)
+	//token, err = a.tokenRepo.UpsertTokenByUserId(user.Id, &token)
 
 	// Set into logged in
 	err = a.userRepo.UpdateLoggedIn(user.Id, true)
@@ -67,23 +69,45 @@ func (a *API) Login(c *fiber.Ctx) error {
 func (a *API) Logout(c *fiber.Ctx) error {
 	SetDefaultContext(c)
 
-	refreshToken := c.Cookies(util.JWT_COOKIE_REFRESH_NAME, "")
-	if util.IsEmpty(refreshToken) {
+	cookie := c.Cookies(util.JWT_COOKIE_REFRESH_NAME, "")
+	if util.IsEmpty(cookie) {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, "rtoken doesn't found")
 	}
 
-	// Remove token
-	token, err := a.tokenRepo.RemoveTokenByToken(refreshToken)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusNotFound, "token not found")
+	// Remove token from database
+	//token, err := a.tokenRepo.RemoveTokenByToken(refreshToken)
+	//if err != nil {
+	//	return SendErrorResponse(c, fasthttp.StatusNotFound, "token not found")
+	//}
+
+	// validate and get claims from refresh token
+	refreshToken, err := jwt.Parse(cookie, a.jwtValidateToken)
+	if util.IsError(err) {
+		DeleteCookies(c, util.JWT_COOKIE_REFRESH_NAME)
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, err.Error())
+	}
+	refreshClaims := refreshToken.Claims.(jwt.MapClaims)
+
+	// Get id from access token
+	accessToken := c.Locals("user").(*jwt.Token)
+	accessClaims := accessToken.Claims.(jwt.MapClaims)
+
+	// Check equivalent id
+	if refreshClaims["id"].(string) != accessClaims["id"].(string) {
+		DeleteCookies(c, util.JWT_COOKIE_REFRESH_NAME)
+		return SendErrorResponse(c, fasthttp.StatusConflict, "token doesn't match")
 	}
 
-	err = a.userRepo.UpdateLoggedIn(token.UserId, false)
+	userId, err := primitive.ObjectIDFromHex(accessClaims["id"].(string))
+	if err != nil {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "malformed id")
+	}
+	err = a.userRepo.UpdateLoggedIn(userId, false)
 
 	// Clear cookies
 	DeleteCookies(c, util.JWT_COOKIE_REFRESH_NAME)
 
-	return SendSuccessResponse(c, fasthttp.StatusOK, model.NewResponseID(token.UserId))
+	return SendSuccessResponse(c, fasthttp.StatusOK, model.NewResponseID(userId))
 }
 
 func (a *API) RequestToken(c *fiber.Ctx) error {
@@ -95,20 +119,34 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "data is not satisfied")
 	}
 
-	// Get token
-	token, err := a.tokenRepo.GetTokenByToken(cookie)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusNotFound, "token not found")
+	// Get token from database
+	//token, err := a.tokenRepo.GetTokenByToken(cookie)
+	//if err != nil {
+	//	return SendErrorResponse(c, fasthttp.StatusNotFound, "token not found")
+	//}
+
+	// validate and get claims from refresh token
+	token, err := jwt.Parse(cookie, a.jwtValidateToken)
+	if util.IsError(err) {
+		DeleteCookies(c, util.JWT_COOKIE_REFRESH_NAME)
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, err.Error())
 	}
+	claims := token.Claims.(jwt.MapClaims)
 
 	// Get user
-	user, err := a.userRepo.GetUserById(token.UserId)
+	userId, err := primitive.ObjectIDFromHex(claims["id"].(string))
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, "malformed id")
+	}
+
+	user, err := a.userRepo.GetUserById(userId)
 	if err != nil {
 		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "user not found")
 	}
 
 	// Generate new jwt
-	claims := jwt.MapClaims{}
+	claims = jwt.MapClaims{}
+	claims["id"] = user.Id.Hex()
 
 	refreshToken, err := util.GenerateRefreshToken(claims, []byte(a.config.SecretKey))
 	if err != nil {
@@ -117,7 +155,7 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 
 	// claims
 	claims = jwt.MapClaims{
-		//"id":         id,
+		"username":   user.Username,
 		"id":         user.Id,
 		"authorized": user.IsLoggedIn,
 		"admin":      user.Type == model.Admin,
@@ -128,12 +166,12 @@ func (a *API) RequestToken(c *fiber.Ctx) error {
 	}
 
 	// Invalidate last token by updating the token
-	err = a.tokenRepo.UpdateToken(token.Token, refreshToken)
-	if err != nil {
-		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to update token")
-	}
+	//err = a.tokenRepo.UpdateToken(token.Token, refreshToken)
+	//if err != nil {
+	//	return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to update token")
+	//}
 
-	// Set refresh token and access token in cookie
+	// Set refresh token in cookie
 	refreshCookie := GenerateTokenCookie(refreshToken)
 	SetCookies(c, refreshCookie)
 

@@ -39,7 +39,7 @@ func SetDefaultContext(c *fiber.Ctx, accepts_ ...string) {
 }
 
 func GenerateTokenCookie(refreshToken_ string) *fiber.Cookie {
-	refreshCookie := GenerateCookie(util.JWT_COOKIE_REFRESH_NAME, refreshToken_, time.Now().Add(util.JWT_COOKIE_REFRESH_TIMEOUT), "/api/v1/")
+	refreshCookie := GenerateCookie(util.JWT_COOKIE_REFRESH_NAME, refreshToken_, time.Now().Add(util.JWT_COOKIE_REFRESH_TIMEOUT))
 
 	return refreshCookie
 }

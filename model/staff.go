@@ -10,7 +10,7 @@ type Staff struct {
 	Position         InstitutePosition  `json:"jabatan" bson:"jabatan"`
 	PersonalData     Personal           `json:"data_pribadi" bson:"data_pribadi"`
 	Education        Education          `json:"pendidikan" bson:"pendidikan"`
-	Savings          []Saving           `json:"tabungan" bson:"tabungan"`
+	Savings          []Saving           `json:"tabungan,omitempty" bson:"tabungan"`
 	TeachTimeDetails []TeachTimeDetail  `json:"details,omitempty" bson:"details"`
 }
 

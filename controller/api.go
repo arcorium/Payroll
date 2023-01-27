@@ -5,10 +5,10 @@ import (
 	"Penggajian/repository"
 	"Penggajian/util"
 	"errors"
-	"fmt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
 	"time"
@@ -51,29 +51,29 @@ func (a *API) HandleAPI() {
 	v1 := a.app.Group("/api/v1")
 
 	// For testing setting cookie
-	v1.Get("/set-cookie", func(ctx *fiber.Ctx) error {
-		cookie := new(fiber.Cookie)
-		cookie.Expires = time.Now().Add(2 * time.Hour)
-		cookie.Name = "test"
-		cookie.Value = "it is test cookie"
-
-		ctx.Cookie(cookie)
-
-		return nil
-	})
+	//v1.Get("/set-cookie", func(ctx *fiber.Ctx) error {
+	//	cookie := new(fiber.Cookie)
+	//	cookie.Expires = time.Now().Add(2 * time.Hour)
+	//	cookie.Name = "test"
+	//	cookie.Value = "it is test cookie"
+	//
+	//	ctx.Cookie(cookie)
+	//
+	//	return nil
+	//})
 	// api/v1/user
 	userApi := v1.Group("/users")
 	// Core
 	userApi.Post("/login", a.Login)
 	userApi.Post("/req-token", a.RequestToken)
 
-	//authUserApi := userApi.Group("", jwtware.New(jwtware.Config{
-	//	SigningKey: []byte(a.config.SecretKey),
-	//	//KeyFunc:       a.jwtValidateToken,
-	//	ErrorHandler:  a.jwtErrorHandler,
-	//	SigningMethod: util.JWT_SIGNING_METHOD},
-	//), a.validateAuthorization())
-	authUserApi := userApi.Group("")
+	authUserApi := userApi.Group("", jwtware.New(jwtware.Config{
+		SigningKey: []byte(a.config.SecretKey),
+		//KeyFunc:       a.jwtValidateToken,
+		ErrorHandler:  a.jwtErrorHandler,
+		SigningMethod: util.JWT_SIGNING_METHOD},
+	), a.validateAuthorization())
+	authUserApi = userApi.Group("")
 	authUserApi.Post("/logout", a.Logout)
 	// Create
 	//authUserApi.Use(a.superOnly())
@@ -149,10 +149,6 @@ func (a *API) jwtValidateToken(token_ *jwt.Token) (interface{}, error) {
 
 	// Check expiration date
 	expired := int64(claims["exp"].(float64))
-
-	// Logging
-	fmt.Println("Expired Date: {}", time.Unix(expired, 0))
-	fmt.Println("Time: {}", time.Unix(time.Now().Unix(), 0))
 
 	if expired <= time.Now().Unix() {
 		return []byte(a.config.SecretKey), errors.New("token expired")

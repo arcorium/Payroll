@@ -27,8 +27,14 @@ func (a *API) RegisterUser(c *fiber.Ctx) error {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, "user already registered")
 	}
 
+	// Get inserted user
+	user, err = a.userRepo.GetUserById(id)
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusNotFound, "there is no user found")
+	}
+
 	// Response
-	return SendSuccessResponse(c, fiber.StatusCreated, model.NewResponseID(id))
+	return SendSuccessResponse(c, fiber.StatusCreated, user)
 }
 
 func (a *API) RemoveUserByName(c *fiber.Ctx) error {
@@ -172,6 +178,12 @@ func (a *API) UpdateUserById(c *fiber.Ctx) error {
 		return SendErrorResponse(c, fasthttp.StatusNotModified, "user not found")
 	}
 
+	// Get inserted user
+	user, err = a.userRepo.GetUserById(objectId)
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusNotFound, "there is no user found")
+	}
+
 	// Response
-	return SendSuccessResponse(c, fasthttp.StatusOK, nil)
+	return SendSuccessResponse(c, fasthttp.StatusOK, user)
 }

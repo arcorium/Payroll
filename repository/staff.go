@@ -30,8 +30,18 @@ func (t *StaffRepository) AddStaff(staff_ *model.Staff) (primitive.ObjectID, err
 		staff_.TeachTimeDetails = []model.TeachTimeDetail{}
 	}
 
+	// Generate UUID for each teach time details
+	for i := 0; i < len(staff_.TeachTimeDetails); i++ {
+		staff_.TeachTimeDetails[i].UUID = uuid.NewString()
+	}
+
 	if len(staff_.Savings) < 1 {
 		staff_.Savings = []model.Saving{}
+	}
+
+	// Generate UUID for each saving
+	for i := 0; i < len(staff_.Savings); i++ {
+		staff_.Savings[i].UUID = uuid.NewString()
 	}
 
 	result, err := t.collection.InsertOne(ctx, *staff_, options.InsertOne())
