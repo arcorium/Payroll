@@ -8,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
 	"time"
@@ -50,33 +49,25 @@ func (a *API) HandleAPI() {
 	// api/v1
 	v1 := a.app.Group("/api/v1")
 
-	// For testing setting cookie
-	//v1.Get("/set-cookie", func(ctx *fiber.Ctx) error {
-	//	cookie := new(fiber.Cookie)
-	//	cookie.Expires = time.Now().Add(2 * time.Hour)
-	//	cookie.Name = "test"
-	//	cookie.Value = "it is test cookie"
-	//
-	//	ctx.Cookie(cookie)
-	//
-	//	return nil
-	//})
 	// api/v1/user
 	userApi := v1.Group("/users")
 	// Core
 	userApi.Post("/login", a.Login)
 	userApi.Post("/req-token", a.RequestToken)
 
-	authUserApi := userApi.Group("", jwtware.New(jwtware.Config{
-		SigningKey: []byte(a.config.SecretKey),
-		//KeyFunc:       a.jwtValidateToken,
-		ErrorHandler:  a.jwtErrorHandler,
-		SigningMethod: util.JWT_SIGNING_METHOD},
-	), a.validateAuthorization())
+	//authApi := v1.Group("", jwtware.New(jwtware.Config{
+	//	SigningKey: []byte(a.config.SecretKey),
+	//	//KeyFunc:       a.jwtValidateToken,
+	//	ErrorHandler:  a.jwtErrorHandler,
+	//	SigningMethod: util.JWT_SIGNING_METHOD},
+	//), a.validateAuthorization())
+	authApi := v1.Group("") // Dummy
+
+	authUserApi := authApi.Group("/users")
 	authUserApi = userApi.Group("")
 	authUserApi.Post("/logout", a.Logout)
 	// Create
-	authUserApi.Use(a.superOnly())
+	//authUserApi.Use(a.superOnly())
 	authUserApi.Post("/", a.RegisterUser)
 	// Delete
 	authUserApi.Delete("/id/:id", a.RemoveUserById)
@@ -90,7 +81,7 @@ func (a *API) HandleAPI() {
 	authUserApi.Put("/name/:name", a.UpdateUserByName)
 
 	// api/v1/teacher
-	staffApi := v1.Group("/staffs")
+	staffApi := authApi.Group("/staffs")
 	// Create
 	staffApi.Post("/", a.RegisterStaff)
 	// Get
@@ -111,7 +102,7 @@ func (a *API) HandleAPI() {
 	//updateStaffApi.Put("/savings/:uuid", a.UpdateSaving)
 	updateStaffApi.Delete("/savings/:uuid", a.RemoveSaving)
 
-	payrollApi := v1.Group("/payrolls")
+	payrollApi := authApi.Group("/payrolls")
 	// Get
 	payrollApi.Get("/", a.GetPayrolls)
 	payrollApi.Get("/:id", a.GetPayrollBySerialNumber)
