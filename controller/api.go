@@ -42,9 +42,9 @@ func (a *API) HandleAPI() {
 	// Middleware
 	config := cors.ConfigDefault
 	config.AllowCredentials = true
-	config.AllowHeaders = "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin"
+	config.AllowHeaders = "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin,Authorization"
 	a.app.Use(cors.New(config))
-	a.app.Use(logger.New(logger.Config{Format: "[${ip}]:${port} ${status} - ${method} ${path}\n"}))
+	a.app.Use(logger.New(logger.Config{Format: "[${time}] [${ip}]:${port} ${status} - ${method} ${path}\n"}))
 
 	// api/v1
 	v1 := a.app.Group("/api/v1")
@@ -104,30 +104,15 @@ func (a *API) HandleAPI() {
 
 	payrollApi := authApi.Group("/payrolls")
 	// Get
-	payrollApi.Get("/", a.GetPayrolls)
-	payrollApi.Get("/:id", a.GetPayrollBySerialNumber)
+	payrollApi.Get("/date/:months/:years", a.GetPayrolls)
+	payrollApi.Get("/id/:serialNumber", a.GetPayrollBySerialNumber)
 	// Edit
 	//payrollApi.Put("/:id", a.UpdatePayrollById)
 	// Delete
-	payrollApi.Delete("/", a.ClearPayroll)
+	payrollApi.Delete("/date/:months/:years", a.ClearPayroll)
 	// Import
 	payrollApi.Post("/imports", a.ImportPayrollFromExcel)
 	payrollApi.Post("/copy", a.CopyPayroll)
-
-	// api/v1/teacher/pos/
-	//positionApi := staffApi.Group("/positions")
-	//// Create
-	//positionApi.Post("/", a.RegisterPosition)
-	//// Delete
-	//positionApi.Delete("/id/:id:", a.RemovePositionById)
-	//positionApi.Delete("/name/:name:", a.RemovePositionByName)
-	//// Get
-	//positionApi.Get("/id/:id:", a.GetPositionById)
-	//positionApi.Get("/name/:name:", a.GetPositionByName)
-	//positionApi.Get("/", a.GetPositions)
-	//// Edit
-	//positionApi.Put("/id/:id:", a.UpdatePositionById)
-	//positionApi.Put("/name/:name:", a.UpdatePositionByName)
 }
 
 func (a *API) Start(address_ string) error {

@@ -12,7 +12,7 @@ import (
 
 func (a *API) GetPayrollBySerialNumber(c *fiber.Ctx) error {
 	// Fetch parameter
-	id := c.Params("id")
+	id := c.Params("serialNumber")
 	if util.IsEmpty(id) {
 		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
 	}
@@ -31,14 +31,17 @@ func (a *API) GetPayrollBySerialNumber(c *fiber.Ctx) error {
 }
 
 func (a *API) GetPayrolls(c *fiber.Ctx) error {
-
-	// Fetch body
-	body := model.PayrollRequest{}
-	if c.BodyParser(&body) != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
+	// Fetch parameter
+	months, err := strconv.ParseUint(c.Params("months"), 10, 8)
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
+	}
+	years, err := strconv.ParseUint(c.Params("years"), 10, 16)
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
 	}
 
-	payrolls, err := a.payrollRepo.GetPayrolls(body.Months, body.Years, true)
+	payrolls, err := a.payrollRepo.GetPayrolls(uint8(months), uint16(years), true)
 	if util.IsError(err) {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "cannot fetch payroll contents")
 	}
@@ -212,20 +215,24 @@ func (a *API) ImportPayrollFromExcel(c *fiber.Ctx) error {
 }
 
 func (a *API) ClearPayroll(c *fiber.Ctx) error {
-	var payrollReq model.PayrollRequest
-
-	if c.BodyParser(&payrollReq) != nil {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
+	// Fetch parameter
+	months, err := strconv.ParseUint(c.Params("months"), 10, 8)
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
+	}
+	years, err := strconv.ParseUint(c.Params("years"), 10, 16)
+	if util.IsError(err) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_PARAMETER)
 	}
 
 	// Clear payroll
-	err := a.payrollRepo.ClearPayroll(payrollReq.Months, payrollReq.Years)
+	err = a.payrollRepo.ClearPayroll(uint8(months), uint16(years))
 	if util.IsError(err) {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to clear payroll data")
 	}
 
 	// Clear saving
-	err = a.staffRepo.ClearSavings(payrollReq.Months, payrollReq.Years)
+	err = a.staffRepo.ClearSavings(uint8(months), uint16(years))
 	if util.IsError(err) {
 		return SendErrorResponse(c, fasthttp.StatusInternalServerError, "failed to clear saving data")
 	}
