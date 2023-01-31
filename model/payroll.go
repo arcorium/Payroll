@@ -8,6 +8,7 @@ type Payroll struct {
 	Id                primitive.ObjectID `json:"id,omitempty" bson:"_id,omitempty"`
 	StaffSerialNumber uint16             `json:"no_urut_staff" bson:"no_urut_staff"`
 	StaffName         string             `json:"nama_staff" bson:"nama_staff"`
+	Institute         string             `json:"institusi" bson:"institusi"`
 	Position          string             `json:"jabatan" bson:"jabatan"`
 	Hours             uint8              `json:"jam_ajar" bson:"jam_ajar"`
 	Salary            Salary             `json:"gaji" bson:"gaji"`

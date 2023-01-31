@@ -13,7 +13,6 @@ import (
 	"io"
 	"log"
 	"strconv"
-	"strings"
 )
 
 type PayrollRepository struct {
@@ -65,10 +64,14 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 	// Get sheets
 	sheets := file.GetSheetMap()
+	if len(sheets) > 1 {
+		return 0, errors.New("sheet should be only has one layer")
+	}
+
 	usedSheet := ""
 	for index, sheet := range sheets {
 		// Set active sheet with named one
-		if !strings.Contains(sheet, "Sheet") {
+		if util.IsEmpty(usedSheet) {
 			file.SetActiveSheet(index)
 			usedSheet = sheet
 			break
@@ -87,7 +90,8 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 		current := rows[i]
 		payroll := model.Payroll{
 			StaffName: current[1],
-			Position:  current[2],
+			Institute: current[2],
+			Position:  current[3],
 			Month:     months_,
 			Years:     years_,
 		}
@@ -101,11 +105,11 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// Hours
 		// Check empty string
-		if util.IsEmpty(current[3]) {
-			current[3] = "0"
+		if util.IsEmpty(current[4]) {
+			current[4] = "0"
 		}
 		// Set Data
-		hours, err := strconv.ParseUint(current[3], 10, 8)
+		hours, err := strconv.ParseUint(current[4], 10, 8)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -113,10 +117,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// Staff Salary
 		// Check empty string
-		if util.IsEmpty(current[4]) {
-			current[4] = "0"
+		if util.IsEmpty(current[5]) {
+			current[5] = "0"
 		}
-		positionSalary, err := strconv.ParseUint(current[4], 10, 64)
+		positionSalary, err := strconv.ParseUint(current[5], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -124,10 +128,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// Honorary Salary
 		// Check empty string
-		if util.IsEmpty(current[5]) {
-			current[5] = "0"
+		if util.IsEmpty(current[6]) {
+			current[6] = "0"
 		}
-		honorarySalary, err := strconv.ParseUint(current[5], 10, 64)
+		honorarySalary, err := strconv.ParseUint(current[6], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -135,10 +139,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// Homeroom Salary
 		// Check empty string
-		if util.IsEmpty(current[6]) {
-			current[6] = "0"
+		if util.IsEmpty(current[7]) {
+			current[7] = "0"
 		}
-		homeroomSalary, err := strconv.ParseUint(current[6], 10, 64)
+		homeroomSalary, err := strconv.ParseUint(current[7], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -146,10 +150,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// TPMPS
 		// Check empty string
-		if util.IsEmpty(current[7]) {
-			current[7] = "0"
+		if util.IsEmpty(current[8]) {
+			current[8] = "0"
 		}
-		tpmps, err := strconv.ParseUint(current[7], 10, 64)
+		tpmps, err := strconv.ParseUint(current[8], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -157,10 +161,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// Saving
 		// Check empty string
-		if util.IsEmpty(current[8]) {
-			current[8] = "0"
+		if util.IsEmpty(current[9]) {
+			current[9] = "0"
 		}
-		save, err := strconv.ParseUint(current[8], 10, 64)
+		save, err := strconv.ParseUint(current[9], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -168,10 +172,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// Nilam Salary Cut
 		// Check empty string
-		if util.IsEmpty(current[9]) {
-			current[9] = "0"
+		if util.IsEmpty(current[10]) {
+			current[10] = "0"
 		}
-		nilam, err := strconv.ParseUint(current[9], 10, 64)
+		nilam, err := strconv.ParseUint(current[10], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -179,10 +183,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// BPJS TK SMP Salary Cut
 		// Check empty string
-		if util.IsEmpty(current[10]) {
-			current[10] = "0"
+		if util.IsEmpty(current[11]) {
+			current[11] = "0"
 		}
-		bpjsTkSmp, err := strconv.ParseUint(current[10], 10, 64)
+		bpjsTkSmp, err := strconv.ParseUint(current[11], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -190,10 +194,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// BPJS SMP Salary Cut
 		// Check empty string
-		if util.IsEmpty(current[11]) {
-			current[11] = "0"
+		if util.IsEmpty(current[12]) {
+			current[12] = "0"
 		}
-		bpjsSmp, err := strconv.ParseUint(current[11], 10, 64)
+		bpjsSmp, err := strconv.ParseUint(current[12], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -201,10 +205,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// BPJS TK SMK Salary Cut
 		// Check empty string
-		if util.IsEmpty(current[12]) {
-			current[12] = "0"
+		if util.IsEmpty(current[13]) {
+			current[13] = "0"
 		}
-		bpjsTkSmk, err := strconv.ParseUint(current[12], 10, 64)
+		bpjsTkSmk, err := strconv.ParseUint(current[13], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
@@ -212,10 +216,10 @@ func (p *PayrollRepository) ImportFromExcel(reader_ io.Reader, months_ uint8, ye
 
 		// BPJS SMK Salary Cut
 		// Check empty string
-		if util.IsEmpty(current[13]) {
-			current[13] = "0"
+		if util.IsEmpty(current[14]) {
+			current[14] = "0"
 		}
-		bpjsSmk, err := strconv.ParseUint(current[13], 10, 64)
+		bpjsSmk, err := strconv.ParseUint(current[14], 10, 64)
 		if util.IsError(err) {
 			return 0, err
 		}
