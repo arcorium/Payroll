@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/valyala/fasthttp"
 	"time"
@@ -56,13 +57,13 @@ func (a *API) HandleAPI() {
 	userApi.Post("/login", a.Login)
 	userApi.Post("/req-token", a.RequestToken)
 
-	//authApi := v1.Group("", jwtware.New(jwtware.Config{
-	//	SigningKey: []byte(a.config.SecretKey),
-	//	//KeyFunc:       a.jwtValidateToken,
-	//	ErrorHandler:  a.jwtErrorHandler,
-	//	SigningMethod: util.JWT_SIGNING_METHOD},
-	//), a.validateAuthorization())
-	authApi := v1.Group("") // Dummy
+	authApi := v1.Group("", jwtware.New(jwtware.Config{
+		SigningKey: []byte(a.config.SecretKey),
+		//KeyFunc:       a.jwtValidateToken,
+		ErrorHandler:  a.jwtErrorHandler,
+		SigningMethod: util.JWT_SIGNING_METHOD},
+	), a.validateAuthorization())
+	//authApi := v1.Group("") // Dummy
 
 	authUserApi := authApi.Group("/users")
 	authUserApi = userApi.Group("")

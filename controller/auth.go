@@ -61,7 +61,7 @@ func (a *API) Login(c *fiber.Ctx) error {
 	refreshCookie := GenerateTokenCookie(refreshToken)
 	SetCookies(c, refreshCookie)
 
-	response := model.ResponseToken{UserId: user.Id.Hex(), AccessToken: accessToken}
+	response := model.ResponseToken{UserId: user.Id.Hex(), AccessToken: accessToken, RefreshToken: refreshToken}
 
 	return SendSuccessResponse(c, fasthttp.StatusOK, response)
 }
@@ -69,9 +69,17 @@ func (a *API) Login(c *fiber.Ctx) error {
 func (a *API) Logout(c *fiber.Ctx) error {
 	SetDefaultContext(c)
 
+	token := model.ResponseToken{}
+	if util.IsError(c.BodyParser(&token)) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
+	}
+
 	cookie := c.Cookies(util.JWT_COOKIE_REFRESH_NAME, "")
 	if util.IsEmpty(cookie) {
-		return SendErrorResponse(c, fasthttp.StatusBadRequest, "rtoken doesn't found")
+		if util.IsEmpty(token.RefreshToken) {
+			return SendErrorResponse(c, fasthttp.StatusBadRequest, "rtoken doesn't found")
+		}
+		cookie = token.RefreshToken
 	}
 
 	// Remove token from database
@@ -89,7 +97,8 @@ func (a *API) Logout(c *fiber.Ctx) error {
 	refreshClaims := refreshToken.Claims.(jwt.MapClaims)
 
 	// Get id from access token
-	accessToken := c.Locals("user").(*jwt.Token)
+	user := c.Locals("user")
+	accessToken := user.(*jwt.Token)
 	accessClaims := accessToken.Claims.(jwt.MapClaims)
 
 	// Check equivalent id
@@ -113,10 +122,18 @@ func (a *API) Logout(c *fiber.Ctx) error {
 func (a *API) RequestToken(c *fiber.Ctx) error {
 	SetDefaultContext(c)
 
+	tokenReq := model.ResponseToken{}
+	if util.IsError(c.BodyParser(&tokenReq)) {
+		return SendErrorResponse(c, fasthttp.StatusBadRequest, RESPONSE_MSG_BODY)
+	}
+
 	// old refresh token
 	cookie := c.Cookies(util.JWT_COOKIE_REFRESH_NAME, "")
 	if util.IsEmpty(cookie) {
-		return SendErrorResponse(c, fasthttp.StatusUnauthorized, "data is not satisfied")
+		if util.IsEmpty(tokenReq.RefreshToken) {
+			return SendErrorResponse(c, fasthttp.StatusBadRequest, "rtoken doesn't found")
+		}
+		cookie = tokenReq.RefreshToken
 	}
 
 	// Get token from database
