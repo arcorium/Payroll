@@ -42,7 +42,7 @@ func (a *API) HandleAPI() {
 	// Middleware
 	config := cors.ConfigDefault
 	config.AllowCredentials = true
-	config.AllowHeaders = "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin,Authorization"
+	config.AllowHeaders = "Origin,Content-Type,Accept,Content-Length,Accept-Language,Accept-Encoding,Connection,Access-Control-Allow-Origin,Access-Control-Allow-Headers,Authorization"
 	a.app.Use(cors.New(config))
 	a.app.Use(logger.New(logger.Config{Format: "[${time}] [${ip}]:${port} ${status} - ${method} ${path}\n"}))
 
@@ -52,6 +52,7 @@ func (a *API) HandleAPI() {
 	// api/v1/user
 	userApi := v1.Group("/users")
 	// Core
+	//userApi.Post("/login", a.Login)
 	userApi.Post("/login", a.Login)
 	userApi.Post("/req-token", a.RequestToken)
 

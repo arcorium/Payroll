@@ -24,7 +24,7 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 	bindPort := os.Getenv("BIND_PORT")
 	secretKey := os.Getenv("SECRET_KEY")
 
-	if util.IsEmpty(bindIp) || util.IsEmpty(bindPort) || util.IsEmpty(secretKey) {
+	if util.IsEmpty(bindPort) || util.IsEmpty(secretKey) {
 		return config, err
 	}
 

@@ -50,6 +50,8 @@ func GenerateCookie(key_ string, value_ string, expiration_ time.Time, path_ ...
 	cookie.Name = key_
 	cookie.Value = value_
 	cookie.HTTPOnly = true
+	//cookie.SameSite = "None"
+	//cookie.Secure = true
 
 	if path_ == nil {
 		cookie.Path = "/"
