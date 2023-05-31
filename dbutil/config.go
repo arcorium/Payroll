@@ -31,7 +31,7 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 		if util.IsEmpty(bindPort) {
 			bindPort = "3000"
 		}
-		return config, err
+		return config, errors.New("environment is not satisfied")
 	}
 
 	// Get binding address to listen
