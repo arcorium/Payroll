@@ -1,7 +1,7 @@
 package dbutil
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"Penggajian/util"
@@ -48,9 +48,9 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 	config.BindAddress = bindAddr
 	config.SecretKey = secretKey
 
-	fmt.Println("Config Database:", config.DatabaseURI)
-	fmt.Println("Config Database Name:", config.DatabaseName)
-	fmt.Println("Config Listen:", config.BindAddress)
-	
+	log.Println("Config Database:", config.DatabaseURI)
+	log.Println("Config Database Name:", config.DatabaseName)
+	log.Println("Config Listen:", config.BindAddress)
+
 	return config, err
 }
