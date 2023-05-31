@@ -20,7 +20,7 @@ func main() {
 
 	db, err := dbutil.Connect(&conf)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalln(err.Error() + " HAHAHAHAH ")
 	}
 	// Repository
 	userRepo := repository.NewUserRepository(&db, "user")
