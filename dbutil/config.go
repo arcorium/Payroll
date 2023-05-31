@@ -1,9 +1,10 @@
 package dbutil
 
 import (
-	"Penggajian/util"
 	"fmt"
 	"os"
+
+	"Penggajian/util"
 )
 
 type DBConfig struct {
@@ -25,6 +26,10 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 	secretKey := os.Getenv("SECRET_KEY")
 
 	if util.IsEmpty(bindPort) || util.IsEmpty(secretKey) {
+		bindPort = os.Getenv("PORT")
+		if util.IsEmpty(bindPort) {
+			bindPort = "3000"
+		}
 		return config, err
 	}
 
