@@ -22,7 +22,6 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
 	// Repository
 	userRepo := repository.NewUserRepository(&db, "user")
 	staffRepo := repository.NewStaffRepository(&db, "staff")

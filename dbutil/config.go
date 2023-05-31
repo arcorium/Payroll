@@ -1,6 +1,7 @@
 package dbutil
 
 import (
+	"errors"
 	"log"
 	"os"
 
@@ -37,11 +38,16 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 	bindAddr := bindIp + ":" + bindPort
 
 	// Get mongodb uri
-	if uri, err = GetURI(); err != nil {
-		return config, err
-	}
+	//if uri, err = GetURI(); err != nil {
+	//	return config, err
+	//}
 
 	// Set config
+	//config.DatabaseURI = uri
+	uri = os.Getenv("MONGODB_URI")
+	if util.IsEmpty(uri) {
+		return config, errors.New("environment is not satisfied")
+	}
 	config.DatabaseURI = uri
 	config.DatabaseName = dbName_
 	config.MigrationCollection = migrationCollection_
