@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"Penggajian/controller"
@@ -20,7 +21,8 @@ func main() {
 
 	db, err := dbutil.Connect(&conf)
 	if err != nil {
-		log.Fatalln(err.Error() + " HAHAHAHAH ")
+		str := fmt.Sprint(" Config: ", conf)
+		log.Fatalln(err.Error() + str)
 	}
 	// Repository
 	userRepo := repository.NewUserRepository(&db, "user")
