@@ -48,7 +48,9 @@ func NewConfig(dbName_ string, migrationCollection_ string) (DBConfig, error) {
 	config.BindAddress = bindAddr
 	config.SecretKey = secretKey
 
-	fmt.Println(config.DatabaseURI)
-
+	fmt.Println("Config Database:", config.DatabaseURI)
+	fmt.Println("Config Database Name:", config.DatabaseName)
+	fmt.Println("Config Listen:", config.BindAddress)
+	
 	return config, err
 }
